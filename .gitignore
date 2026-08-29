@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+.DS_Store
+logs/
+
+# Der eigene Vault gehoert nicht ins Repo - nur data.example wird versioniert
+data/

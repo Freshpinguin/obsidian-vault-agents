@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SciFi World Engine – Chat</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8ec;
+    --muted: #8a90a0;
+    --accent: #5b8cff;
+    --accent-text: #0b0d12;
+    --error: #ff6b6b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+
+  header h1 .dot {
+    color: var(--accent);
+  }
+
+  #new-chat {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  #new-chat:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .msg {
+    max-width: 80%;
+    padding: 0.65rem 0.9rem;
+    border-radius: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.95rem;
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: var(--accent-text);
+    border-bottom-right-radius: 3px;
+  }
+
+  .msg.assistant {
+    align-self: flex-start;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 3px;
+  }
+
+  .msg.system {
+    align-self: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    background: none;
+    border: none;
+    text-align: center;
+  }
+
+  .msg.error {
+    align-self: flex-start;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+    border-bottom-left-radius: 3px;
+  }
+
+  .msg.pending {
+    align-self: flex-start;
+    color: var(--muted);
+    font-style: italic;
+    background: none;
+    border: none;
+    padding-left: 0.1rem;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.25rem;
+    flex-shrink: 0;
+  }
+
+  form {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  #message-input {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    resize: none;
+    font-family: inherit;
+  }
+
+  #message-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  #send-btn {
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    padding: 0 1.2rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #send-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --border: #e0e2e8;
+      --text: #1a1d23;
+      --muted: #6b7280;
+      --accent: #3b63e0;
+      --accent-text: #ffffff;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="dot">●</span> SciFi World Engine</h1>
+  <button id="new-chat" type="button">Neuer Chat</button>
+</header>
+
+<main id="messages">
+  <div class="msg system">Schreib eine Nachricht, um den Chat zu starten.</div>
+</main>
+
+<footer>
+  <form id="chat-form">
+    <textarea id="message-input" rows="1" placeholder="Frag etwas zum Vault…" autofocus></textarea>
+    <button id="send-btn" type="submit">Senden</button>
+  </form>
+</footer>
+
+<script>
+(() => {
+  let sessionId = null;
+  let sending = false;
+
+  const messagesEl = document.getElementById("messages");
+  const formEl = document.getElementById("chat-form");
+  const inputEl = document.getElementById("message-input");
+  const sendBtn = document.getElementById("send-btn");
+  const newChatBtn = document.getElementById("new-chat");
+
+  function addMessage(role, text) {
+    const el = document.createElement("div");
+    el.className = `msg ${role}`;
+    el.textContent = text;
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return el;
+  }
+
+  function autoResize() {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + "px";
+  }
+  inputEl.addEventListener("input", autoResize);
+
+  async function sendMessage(text) {
+    sending = true;
+    sendBtn.disabled = true;
+    const pending = addMessage("pending", "Denkt nach …");
+
+    try {
+      const url = sessionId ? `/sessions/${sessionId}/messages` : "/sessions";
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+      });
+
+      pending.remove();
+
+      if (res.status === 404) {
+        addMessage("error", "Diese Session existiert nicht mehr (Server neu gestartet?). Bitte neuen Chat starten.");
+        sessionId = null;
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        addMessage("error", body.detail || `Fehler (${res.status}).`);
+        return;
+      }
+
+      const data = await res.json();
+      sessionId = data.session_id;
+      addMessage("assistant", data.reply);
+    } catch (err) {
+      pending.remove();
+      addMessage("error", "Verbindung zum Server fehlgeschlagen: " + err.message);
+    } finally {
+      sending = false;
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  }
+
+  formEl.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (sending) return;
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    addMessage("user", text);
+    inputEl.value = "";
+    autoResize();
+    sendMessage(text);
+  });
+
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      formEl.requestSubmit();
+    }
+  });
+
+  newChatBtn.addEventListener("click", async () => {
+    if (sessionId) {
+      fetch(`/sessions/${sessionId}`, { method: "DELETE" }).catch(() => {});
+    }
+    sessionId = null;
+    messagesEl.innerHTML = "";
+    addMessage("system", "Neuer Chat gestartet.");
+    inputEl.focus();
+  });
+})();
+</script>
+
+</body>
+</html>

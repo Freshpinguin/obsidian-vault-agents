@@ -1,0 +1,30 @@
+services:
+  world-engine:
+    build: .
+    container_name: scifi-world-engine
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      # Der zu überwachende Vault. Standardmässig der mitgelieferte Demo-Vault;
+      # per VAULT_PATH in der .env auf den eigenen Obsidian-Vault zeigen lassen.
+      - ${VAULT_PATH:-./data.example}:/app/data
+
+      # Nur nötig, wenn der Vault selbst ein Git-Repo ist und das automatische
+      # Backup (src/backup.py) per SSH pushen soll:
+      # - ${HOME}/.ssh:/home/appuser/.ssh:ro
+
+  # Optional: Syncthing, um den Vault zwischen mehreren Geräten zu synchronisieren.
+  # syncthing:
+  #   image: syncthing/syncthing:latest
+  #   container_name: scifi-syncthing
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8384:8384"      # Weboberfläche
+  #     - "22000:22000/tcp"
+  #     - "22000:22000/udp"
+  #     - "21027:21027/udp"
+  #   volumes:
+  #     - ${VAULT_PATH:-./data.example}:/var/syncthing/data

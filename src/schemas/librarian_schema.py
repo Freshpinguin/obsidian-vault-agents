@@ -1,0 +1,19 @@
+# src/schemas/librarian_schema.py
+from pydantic import BaseModel, Field
+
+
+class LibrarianInput(BaseModel):
+    question: str = Field(description="Die Frage, die anhand des Vault-Inhalts beantwortet werden soll.")
+    ai_map: str = Field(description="Übersicht aller Dateien und Ordner im Vault mit Kurz-Zusammenfassung, Ausgangspunkt für die Recherche.")
+
+
+class LibrarianOutput(BaseModel):
+    answer: str = Field(description="Die Antwort auf die Frage, gestützt auf den tatsächlich gelesenen Vault-Inhalt.")
+    sources: list[str] = Field(default_factory=list, description="Vault-Pfade der Dateien, auf denen die Antwort beruht.")
+
+
+class PathsArgs(BaseModel):
+    paths: list[str] = Field(
+        description="Liste von Vault-Pfaden (Ordner oder Dateien). Immer alle relevanten Pfade auf einmal übergeben, "
+                     "statt mehrere einzelne Aufrufe nacheinander zu machen."
+    )
