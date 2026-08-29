@@ -1,7 +1,7 @@
 services:
   world-engine:
     build: .
-    container_name: scifi-world-engine
+    container_name: obsidian-vault-agents
     restart: unless-stopped
     env_file:
       - .env

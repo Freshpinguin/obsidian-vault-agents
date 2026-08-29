@@ -1,4 +1,4 @@
-# SciFi World Engine
+# Obsidian Vault Agents
 
 Eine selbstgehostete Agenten-Engine für einen persönlichen **Obsidian-Vault**.
 Sie beobachtet den Vault im Hintergrund, hält für jede Datei und jeden Ordner
@@ -94,6 +94,24 @@ Python, FastAPI, watchdog, `litellm` als Provider-Abstraktion, Google GenAI SDK
 für Search Grounding, Antigravity SDK für den Reasoner, pydantic-Schemas für alle
 Werkzeuge und Agenten-Ein-/Ausgaben, Docker Compose fürs Deployment.
 Rund 3.400 Zeilen Python.
+
+## Kosten: keine
+
+Das gesamte System läuft auf dem **kostenlosen Kontingent von Google AI Studio**.
+Verwendet werden ausschliesslich Modelle, die dort im Free Tier verfügbar sind
+(Gemini Flash-Lite und Gemma), und auch die Websuche nutzt Search Grounding im
+Free Tier. Ausser dem Strom für den Raspberry Pi entstehen keine laufenden Kosten.
+
+Zwei Architekturentscheidungen ergeben sich direkt daraus:
+
+- **Debouncing** verhindert, dass jede einzelne Änderung sofort einen Modellaufruf
+  auslöst. Wer beim Schreiben alle paar Sekunden speichert, würde ein Kontingent
+  sonst in Minuten aufbrauchen.
+- **Die Modell-Kaskade** fängt erschöpfte Ratenlimits ab: Statt abzubrechen, fällt
+  die Engine auf das nächstschwächere Modell zurück, das noch Kontingent hat.
+
+Wer mehr Durchsatz braucht, kann über `litellm` jeden anderen Anbieter
+einhängen — dann fallen dessen Kosten an.
 
 ## Start
 

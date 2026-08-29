@@ -16,7 +16,7 @@ from src.logging_config import logger
 from src.chat_routes import router as chat_router
 
 # Die FastAPI App initialisieren
-app = FastAPI(title="SciFi World Engine")
+app = FastAPI(title="Obsidian Vault Agents")
 app.include_router(chat_router)
 
 # Der Ordner, den wir überwachen (im Docker-Container ist das /app/data)
@@ -111,4 +111,4 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "Die SciFi World Engine läuft online!"}
+    return {"status": "Obsidian Vault Agents läuft."}
