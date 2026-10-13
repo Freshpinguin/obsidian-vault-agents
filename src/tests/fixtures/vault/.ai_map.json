@@ -1,0 +1,20 @@
+{
+  "directories": {
+    "Meetings": "Meeting notes, decision log and stakeholder map.",
+    "Architecture": "Pipeline design, decision records and deployment notes."
+  },
+  "files": {
+    "Overview.md": "Atlas project overview: goals, scope, milestones and success metrics.",
+    "Meetings/Kickoff.md": "Kickoff meeting: problem statement, agreed goals and first data source.",
+    "Meetings/Weekly-Sync.md": "Format and running log of the weekly sync, most recent weeks first.",
+    "Meetings/Decisions.md": "Running log of decisions taken in meetings, with rationale.",
+    "Meetings/Stakeholders.md": "Who signs off on what, and how often each group expects an update.",
+    "Meetings/Planning.md": "Summary pending...",
+    "Meetings/Retro.md": "Summary pending...",
+    "Architecture/Data-Pipeline.md": "Four-stage daily batch ingestion pipeline and its failure behaviour.",
+    "Architecture/Decisions.md": "Architecture decision records: schema, batch vs streaming, transforms.",
+    "Architecture/Deployment.md": "Deployment process notes, infrastructure components, and identified gaps for pipeline jobs.",
+    "Architecture-Decisions-Copy.md": "Summary pending...",
+    "Architecture/Alternative-Streaming.md": "Summary pending..."
+  }
+}

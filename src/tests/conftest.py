@@ -35,7 +35,11 @@ httpx.Client.__init__ = lambda self, *a, **k: _orig_httpx_init(
 import litellm  # noqa: E402
 import pytest  # noqa: E402
 
-EXAMPLE_VAULT = Path(__file__).resolve().parents[2] / "data.example"
+# The tests get their own fixture vault rather than data.example: the example vault is
+# demo content that changes whenever the demo changes, and 21 tests used to break the
+# moment it did. This copy is owned by the test suite and only changes when a test needs
+# it to.
+EXAMPLE_VAULT = Path(__file__).resolve().parent / "fixtures" / "vault"
 
 
 def _fill_vault() -> Path:
@@ -53,7 +57,7 @@ def _fill_vault() -> Path:
 
 @pytest.fixture(autouse=True)
 def vault() -> Path:
-    """A fresh test vault (a copy of data.example) for EVERY test."""
+    """A fresh test vault (a copy of the fixture vault) for EVERY test."""
     return _fill_vault()
 
 
