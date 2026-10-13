@@ -1,16 +1,10 @@
 # src/agents/chat.py
 from src.schemas.agent_schema import AgentSession, WikiAgent
-from src.schemas.chat_schema import (
-    CheckTaskStatusArgs,
-    ChatInput,
-    ChatOutput,
-    StartBackgroundTaskArgs,
-)
+from src.schemas.chat_schema import ChatInput, ChatOutput
 from src.schemas.llm_models import LLMModels
-from src.schemas.tool_schema import WikiTool
 from src.agentic.engine import continue_chat_session, start_chat_session
-from src.agentic.shared_tools import CONTENT_TOOLS
-from src.agentic.agents.task_agent import check_task_status, start_background_task
+from src.agentic.tools import CONTENT_TOOLS
+from src.agentic.tools.tasks import check_task_status_tool, start_background_task_tool
 from src.navigation import load_ai_map, format_ai_map
 
 SYSTEM_PROMPT = """Du bist der Chat-Assistent eines persönlichen Obsidian-Wikis (Science-Fiction-Weltenbau).
@@ -146,19 +140,6 @@ konkrete Details oder Fakten aus dem Text, lade die Datei direkt per load_files(
 """
 
 
-start_background_task_tool = WikiTool(
-    name="start_background_task",
-    description="Startet einen Task-Agenten, der eine mehrschrittige Aufgabe eigenständig im Hintergrund plant und abarbeitet. Blockiert nicht, gibt sofort eine task_id zurück.",
-    parameters=StartBackgroundTaskArgs,
-    func=start_background_task,
-)
-
-check_task_status_tool = WikiTool(
-    name="check_task_status",
-    description="Fragt Plan, Fortschritt und ggf. Endergebnis einer per start_background_task gestarteten Hintergrund-Aufgabe ab.",
-    parameters=CheckTaskStatusArgs,
-    func=check_task_status,
-)
 
 ChatAgent = WikiAgent(
     name="Chat",

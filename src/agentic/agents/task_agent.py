@@ -19,10 +19,10 @@ from datetime import datetime
 
 from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.llm_models import LLMModels
-from src.schemas.task_agent_schema import PlanStep, TaskAgentInput, TaskAgentOutput, UpdatePlanArgs
-from src.schemas.tool_schema import WikiTool
+from src.schemas.task_agent_schema import PlanStep, TaskAgentInput, TaskAgentOutput
 from src.agentic.engine import run_agent_session
-from src.agentic.shared_tools import CONTENT_TOOLS
+from src.agentic.tools import CONTENT_TOOLS
+from src.agentic.tools.tasks import update_plan_tool
 from src.core.logging_config import logger
 from src.navigation import format_ai_map, load_ai_map
 
@@ -137,12 +137,6 @@ def _update_plan(task_id: str, steps: list[dict]) -> str:
     return "Plan gespeichert:\n" + _format_plan(steps)
 
 
-update_plan_tool = WikiTool(
-    name="update_plan",
-    description="Legt den vollständigen Arbeitsplan fest oder aktualisiert ihn (z.B. Status einzelner Schritte). Immer die komplette Liste aller Schritte übergeben.",
-    parameters=UpdatePlanArgs,
-    func=_update_plan,
-)
 
 TaskAgent = WikiAgent(
     name="TaskAgent",

@@ -4,16 +4,17 @@ import threading
 from typing import Any
 
 from src.schemas.agent_schema import AgentSession, WikiAgent
-from src.schemas.librarian_schema import LibrarianInput, LibrarianOutput, PathsArgs
+from src.schemas.librarian_schema import LibrarianInput, LibrarianOutput
 from src.schemas.llm_models import LLMModels
-from src.schemas.tool_schema import WikiTool
 from src.agentic.engine import run_agent_session
+from src.agentic.tools.vault_read import (
+    directory_summaries_tool,
+    file_summaries_tool,
+    files_tool,
+)
 from src.navigation import (
     load_ai_map,
     format_ai_map,
-    load_directory_summaries,
-    load_file_summaries,
-    load_files,
 )
 
 SYSTEM_PROMPT = """Du bist der Librarian-Agent eines persönlichen Obsidian-Wikis (Science-Fiction-Weltenbau).
@@ -62,32 +63,6 @@ enthält), rufe KEIN Werkzeug mehr auf und antworte stattdessen direkt im geford
 """
 
 
-def _adapt(batch_loader):
-    def call(paths: list[str]) -> str:
-        return batch_loader(paths)
-    return call
-
-
-directory_summaries_tool = WikiTool(
-    name="load_directory_summaries",
-    description="Lädt für mehrere Ordner auf einmal deren ausführliche Zusammenfassung samt Datei- und Unterordnerliste.",
-    parameters=PathsArgs,
-    func=_adapt(load_directory_summaries),
-)
-
-file_summaries_tool = WikiTool(
-    name="load_file_summaries",
-    description="Lädt für mehrere Dateien auf einmal deren Kurz-Zusammenfassung.",
-    parameters=PathsArgs,
-    func=_adapt(load_file_summaries),
-)
-
-files_tool = WikiTool(
-    name="load_files",
-    description="Lädt für mehrere Dateien auf einmal den vollen Inhalt. Die einzige verlässliche Quelle für Details.",
-    parameters=PathsArgs,
-    func=_adapt(load_files),
-)
 
 LibrarianAgent = WikiAgent(
     name="Librarian",
