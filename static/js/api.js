@@ -102,7 +102,7 @@ export async function postChatMessage(payload, sessionId, onStatus) {
             try {
               const event = JSON.parse(line.slice(6));
               if (event.type === "status" && typeof onStatus === "function") {
-                onStatus(event.message);
+                onStatus(event.message, event.level || "info");
               } else if (event.type === "done") {
                 finalData = event;
               } else if (event.type === "error") {

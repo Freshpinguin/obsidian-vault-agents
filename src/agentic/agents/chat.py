@@ -190,7 +190,7 @@ def start_wiki_chat(
     model_override: LLMModels | None = None,
     active_file: str | None = None,
     active_file_summary: str | None = None,
-    on_status: Callable[[str], None] | None = None,
+    on_status: Callable[[str, str], None] | None = None,
 ) -> AgentSession:
     """Starts a new chat session with the person's first message. Loads the current
     ai_map and gives it to the agent as system context from the outset. If a file is
@@ -211,7 +211,7 @@ def continue_wiki_chat(
     model_override: LLMModels | None = None,
     active_file: str | None = None,
     active_file_summary: str | None = None,
-    on_status: Callable[[str], None] | None = None,
+    on_status: Callable[[str, str], None] | None = None,
 ) -> AgentSession:
     """Continues an existing chat session with a further message. If a file is open in
     the frontend, the path and the short ai_map summary are prefixed to the message."""

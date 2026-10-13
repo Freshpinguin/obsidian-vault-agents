@@ -179,6 +179,18 @@
   transition: opacity 0.2s ease;
 }
 
+/* Provider is retrying or failing over: the turn is still alive, but the wait has a
+   reason the user should see. */
+.thinking-indicator.degraded {
+  background: var(--red-bg);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.thinking-indicator.degraded .thinking-dot {
+  background: #fca5a5;
+}
+
 .thinking-dots {
   display: flex;
   gap: 3px;

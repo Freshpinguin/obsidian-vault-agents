@@ -76,10 +76,16 @@ export async function sendChatMessage(text) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
   const thinkingTextEl = thinkingEl.querySelector(".thinking-text");
-  const onStatus = (statusMsg) => {
+  const indicatorEl = thinkingEl.querySelector(".thinking-indicator");
+  const onStatus = (statusMsg, level = "info") => {
     if (thinkingTextEl) {
       thinkingTextEl.textContent = statusMsg;
       messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+    // "warning" means the turn is still running but the provider is failing (retry or
+    // failover), so the wait gets a visible reason instead of looking like a hang.
+    if (indicatorEl) {
+      indicatorEl.classList.toggle("degraded", level === "warning");
     }
   };
 

@@ -151,6 +151,13 @@ class LLMCall(BaseModel):
     input_data: BaseModel
     output_data: BaseModel | None = None
     error_message: str | None = None
+    user_message: str | None = Field(
+        default=None,
+        description=(
+            "Error text meant for the chat UI: one sentence, no stack trace (see "
+            "engine/api_errors.py). error_message keeps the technical version for the log."
+        ),
+    )
     tool_calls: list[ToolCall] = Field(default_factory=list)
     chars_in: int = 0
     chars_out: int = 0

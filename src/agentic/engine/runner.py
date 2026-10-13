@@ -9,6 +9,12 @@ from typing import Any, Callable
 from src.schemas.llm_models import LLMModels, get_fallback_models
 from src.schemas.status import AgentStatus
 from src.core.logging_config import logger
+from src.agentic.engine.api_errors import (
+    FAILOVER_STATUS,
+    RETRY_STATUS,
+    describe_api_failure,
+    short_reason,
+)
 from src.agentic.engine.session_log import SessionLogger
 from src.agentic.engine.compaction import maybe_compact
 from src.agentic.engine.response import strip_json_fence
@@ -81,8 +87,15 @@ def _completion_with_failover(
             # fallbacks, so every fallback of a tool-call round failed before being sent.
             kwargs.pop("tool_choice")
 
-        if position > 0:
-            emit_status(f"{agent_name}: switching to {str(model).split('/')[-1]}…")
+        if position > 0 and last_error is not None:
+            # Name the reason for the switch: a rate limit fails over without ever going
+            # through the retry message, so this is the only place the user would see it.
+            emit_status(
+                FAILOVER_STATUS.format(
+                    reason=short_reason(last_error), model=str(model).split("/")[-1],
+                ),
+                STATUS_WARNING,
+            )
 
         for attempt in range(ATTEMPTS_PER_MODEL):
             remaining = deadline - time.monotonic()
@@ -103,6 +116,14 @@ def _completion_with_failover(
                     logger.warning(f"[{agent_name}] {type(e).__name__} on {model} persisted, failing over.")
                     break
                 backoff = RETRY_BACKOFF_S[min(attempt, len(RETRY_BACKOFF_S) - 1)]
+                # The user is staring at a spinner at this point - say what is going on,
+                # otherwise a provider outage is indistinguishable from a hang.
+                emit_status(
+                    RETRY_STATUS.format(
+                        reason=short_reason(e), attempt=attempt + 1, total=ATTEMPTS_PER_MODEL,
+                    ),
+                    STATUS_WARNING,
+                )
                 logger.warning(
                     f"[{agent_name}] {type(e).__name__} on {model} "
                     f"(attempt {attempt + 1}/{ATTEMPTS_PER_MODEL}), retrying in {backoff}s."
@@ -125,16 +146,22 @@ FORCE_FINAL_ANSWER_INSTRUCTION = (
 
 _strip_json_fence = strip_json_fence
 
-_status_callback_var: contextvars.ContextVar[Callable[[str], None] | None] = contextvars.ContextVar(
+# Status levels a consumer may render differently. "warning" marks a degraded but still
+# running turn (a provider retry or failover), so the UI can show it as more than just
+# another progress line.
+STATUS_INFO = "info"
+STATUS_WARNING = "warning"
+
+_status_callback_var: contextvars.ContextVar[Callable[[str, str], None] | None] = contextvars.ContextVar(
     "_status_callback_var", default=None
 )
 
 
-def emit_status(message: str) -> None:
+def emit_status(message: str, level: str = STATUS_INFO) -> None:
     cb = _status_callback_var.get()
     if cb:
         try:
-            cb(message)
+            cb(message, level)
         except Exception:
             pass
 
@@ -192,7 +219,7 @@ def _describe_tool_call(agent_name: str, tool_name: str, arguments: dict) -> str
 def _run_turn(
     session: AgentSession,
     model_override: LLMModels | None = None,
-    on_status: Callable[[str], None] | None = None,
+    on_status: Callable[[str, str], None] | None = None,
     rollback_to: int | None = None,
 ) -> None:
     """Executes ONE turn of an AgentSession: starting from the current conversation
@@ -285,6 +312,7 @@ def _run_turn(
                     status=AgentStatus.ERROR,
                     input_data=session.first_input,
                     error_message=f"API error: {api_e}",
+                    user_message=describe_api_failure(api_e),
                     chars_in=chars_in,
                     chars_out=0,
                 )
@@ -447,7 +475,7 @@ def run_agent_session(
     agent: WikiAgent,
     raw_input: Any,
     model_override: LLMModels = None,
-    on_status: Callable[[str], None] | None = None,
+    on_status: Callable[[str, str], None] | None = None,
 ) -> AgentSession:
     """Runs a complete one-shot task session (e.g. Summarizer, FolderSummarizer,
     Librarian): one input in, one structured response out, with possibly several ReAct
@@ -464,7 +492,7 @@ def start_chat_session(
     message: str,
     model_override: LLMModels = None,
     context: str | None = None,
-    on_status: Callable[[str], None] | None = None,
+    on_status: Callable[[str, str], None] | None = None,
 ) -> AgentSession:
     """Starts a new chat session with the first user message. The agent must have an
     input_type with a 'message' field (see ChatInput). 'context', if given, is placed
@@ -481,7 +509,7 @@ def continue_chat_session(
     session: AgentSession,
     message: str,
     model_override: LLMModels = None,
-    on_status: Callable[[str], None] | None = None,
+    on_status: Callable[[str, str], None] | None = None,
 ) -> AgentSession:
     """Appends another user message to an already running chat session and lets the agent
     respond to it (again possibly with tool calls). The entire history so far is

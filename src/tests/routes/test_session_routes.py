@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 
+import litellm
+
 import src.routes
 from src.tests.fakes.fake_llm import FakeLLM, final, raw, tool_calls
 
@@ -96,7 +98,35 @@ def test_route_llm_failure_returns_502(fake_llm: FakeLLM, api_client: TestClient
     )
     resp = api_client.post("/sessions", json={"message": "Hallo"})
     assert resp.status_code == 502
-    assert "chat agent could not produce a response" in resp.json()["detail"]
+    detail = resp.json()["detail"]
+    assert "did not return a usable answer" in detail
+    assert "Nothing was written to the vault" in detail
+
+
+def test_route_provider_outage_detail_is_specific(fake_llm: FakeLLM, api_client: TestClient):
+    """A provider 500 must reach the chat as a 500/outage message, not as the generic
+    'could not produce a response' - the user has to know that retrying is worth it."""
+    fake_llm.script(
+        "Chat",
+        *[litellm.InternalServerError("boom", model="x", llm_provider="gemini")] * 6,
+    )
+    resp = api_client.post("/sessions", json={"message": "Hallo"})
+    assert resp.status_code == 502
+    detail = resp.json()["detail"]
+    assert "HTTP 500" in detail
+    assert "Nothing was written to the vault" in detail
+    assert "try again" in detail
+
+
+def test_route_rate_limit_detail_mentions_waiting(fake_llm: FakeLLM, api_client: TestClient):
+    # A rate limit never retries the same model, so exactly one attempt per candidate.
+    fake_llm.script(
+        "Chat",
+        *[litellm.RateLimitError("quota", model="x", llm_provider="gemini")] * 2,
+    )
+    resp = api_client.post("/sessions", json={"message": "Hallo"})
+    assert resp.status_code == 502
+    assert "rate limit" in resp.json()["detail"]
 
 
 def test_route_unknown_session_returns_404(api_client: TestClient):
@@ -243,3 +273,55 @@ def test_route_message_stream(vault: Path, fake_llm: FakeLLM, api_client: TestCl
     assert done_events[0]["reply"] == "Changed"
     assert len(done_events[0]["mutations"]) == 1
     assert done_events[0]["mutations"][0]["tool"] == "edit_file"
+
+
+def test_route_stream_reports_provider_retry_as_warning(vault: Path, fake_llm: FakeLLM, api_client: TestClient):
+    """While the provider is failing, the stream must say so (level "warning") instead of
+    leaving the user on a silent spinner - and the turn still recovers."""
+    import json
+    fake_llm.script(
+        "Chat",
+        litellm.InternalServerError("boom", model="x", llm_provider="gemini"),
+        final({"reply": "Recovered after a retry."}),
+    )
+
+    resp = api_client.post(
+        "/sessions",
+        json={"message": "Hallo"},
+        headers={"Accept": "text/event-stream"},
+    )
+    events = [json.loads(line[6:]) for line in resp.text.split("\n") if line.startswith("data: ")]
+
+    warnings = [e for e in events if e.get("type") == "status" and e.get("level") == "warning"]
+    assert warnings, f"no warning status in {events}"
+    assert "retrying (1/3)" in warnings[0]["message"]
+    assert "server error" in warnings[0]["message"]
+
+    # Ordinary progress stays level "info", so the UI only highlights real trouble.
+    assert all(e.get("level") == "info" for e in events
+               if e.get("type") == "status" and e not in warnings)
+
+    done = [e for e in events if e.get("type") == "done"]
+    assert len(done) == 1
+    assert done[0]["reply"] == "Recovered after a retry."
+
+
+def test_route_stream_error_event_carries_classified_detail(fake_llm: FakeLLM, api_client: TestClient):
+    """A total provider outage must arrive as an error event the chat can display."""
+    import json
+    fake_llm.script(
+        "Chat",
+        *[litellm.ServiceUnavailableError("overloaded", model="x", llm_provider="gemini")] * 6,
+    )
+
+    resp = api_client.post(
+        "/sessions",
+        json={"message": "Hallo"},
+        headers={"Accept": "text/event-stream"},
+    )
+    events = [json.loads(line[6:]) for line in resp.text.split("\n") if line.startswith("data: ")]
+
+    errors = [e for e in events if e.get("type") == "error"]
+    assert len(errors) == 1
+    assert "HTTP 503" in errors[0]["detail"]
+    assert "Nothing was written to the vault" in errors[0]["detail"]
