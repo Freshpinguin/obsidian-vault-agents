@@ -2,7 +2,7 @@
 from fastapi import HTTPException, Query
 
 from src.core.logging_config import logger
-from src.core.obsidian_processor import is_summarizable_path
+from src.core.obsidian_processor import is_summarizable_path, remove_map_entry
 from src.navigation.vault_navigation import (
     VaultPathError,
     _resolve,
@@ -36,6 +36,8 @@ def delete_file_content(path: str = Query(..., description="Relativer oder volls
     rel_path = _vault_path(resolved, root)
     try:
         resolved.unlink()
+        # Eintrag sofort aus der AI-Map nehmen, damit Agenten keine Phantom-Notiz sehen.
+        remove_map_entry(resolved, root)
         logger.info(f"[Mutation] Datei im Frontend gelöscht: {rel_path}")
         return DeleteFileResponse(
             path=rel_path,

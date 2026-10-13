@@ -8,15 +8,24 @@ des Vaults abgesichert (siehe _resolve_new_path).
 
 Schreibt ein Aufruf hier tatsächlich eine Datei im Vault, greift automatisch der bereits
 laufende Watchdog (siehe main.py): Er erkennt die Änderung und stößt die normale
-Zusammenfassungs-Pipeline an (Summarizer-Agent, .ai_map.json, .index.md-Kaskade) – diese
-Funktionen müssen sich darum nicht selbst kümmern.
+Zusammenfassungs-Pipeline an (Summarizer-Agent, .ai_map.json, .index.md-Kaskade).
+
+Ausnahme: create_file trägt die neue Datei zusätzlich sofort selbst in die .ai_map.json
+ein (register_pending_file), weil der Summarizer um 30 Minuten verzögert läuft und die
+Notiz für die Agenten bis dahin sonst unsichtbar wäre.
 """
 import unicodedata
 from pathlib import Path
 
 import yaml
 
-from src.core.obsidian_processor import is_summarizable_path
+from src.core.obsidian_processor import (
+    is_summarizable_path,
+    move_map_entry,
+    register_pending_directory,
+    register_pending_file,
+    remove_map_entry,
+)
 from src.core.logging_config import logger
 from src.navigation.vault_navigation import (
     ROOT_ALIASES,
@@ -63,6 +72,7 @@ def create_directory(path: str, vault_root: Path | None = None) -> str:
         return f"Fehler: '{_vault_path(target, root)}' existiert bereits ({kind})."
 
     target.mkdir(parents=True)
+    register_pending_directory(target, root)
     logger.info(f"[Mutation] Ordner erstellt: {_vault_path(target, root)}")
     return f"Ordner '{_vault_path(target, root)}' wurde erstellt."
 
@@ -89,6 +99,7 @@ def create_file(path: str, content: str, vault_root: Path | None = None) -> str:
     # (z.B. weil ein Agent den Inhalt einer anderen Datei als Vorlage kopiert hat),
     # wird es entfernt statt in der neuen Datei zu landen.
     target.write_text(_strip_frontmatter(content) + "\n", encoding="utf-8")
+    register_pending_file(target, root)
     logger.info(f"[Mutation] Datei erstellt: {_vault_path(target, root)}")
     return f"Datei '{_vault_path(target, root)}' wurde erstellt."
 
@@ -149,6 +160,7 @@ def move_file(path: str, new_path: str, vault_root: Path | None = None) -> str:
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     source.rename(destination)
+    move_map_entry(source, destination, root)
     logger.info(f"[Mutation] Datei verschoben: {source_label} -> {dest_label}")
     return f"Datei verschoben: '{source_label}' -> '{dest_label}'."
 
@@ -167,6 +179,7 @@ def delete_file(path: str, vault_root: Path | None = None) -> str:
     label = _vault_path(target, root)
     try:
         target.unlink()
+        remove_map_entry(target, root)
         logger.info(f"[Mutation] Datei gelöscht: {label}")
         return f"Datei '{label}' wurde gelöscht."
     except Exception as e:

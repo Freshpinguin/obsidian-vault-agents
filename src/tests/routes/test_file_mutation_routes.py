@@ -60,3 +60,63 @@ def test_put_file_content_and_delete(tmp_path: Path, monkeypatch):
     # 5. Erneutes Löschen führt zu 404
     del_response404 = client.delete("/files/content?path=TestNote.md")
     assert del_response404.status_code == 404
+
+
+def test_create_file_move_and_validation(tmp_path: Path, monkeypatch):
+    """Ordner-Anlage ueber HTTP gibt es nicht mehr (nur noch Agenten legen Ordner an),
+    daher wird der Zielordner hier direkt auf der Platte erzeugt."""
+    from src.navigation import vault_navigation
+    vault_dir = tmp_path / "vault"
+    vault_dir.mkdir()
+    (vault_dir / ".ai_map.json").write_text('{"directories": {}, "files": {}}', encoding="utf-8")
+    (vault_dir / "Projekte" / "KI").mkdir(parents=True)
+
+    monkeypatch.setattr(vault_navigation, "VAULT_ROOT", vault_dir)
+
+    # 1. Notiz im Ordner anlegen
+    file_res = client.post(
+        "/files/create-file",
+        json={"path": "Projekte/KI/Notiz1.md", "content": "# Notiz 1\nInhalt"},
+    )
+    assert file_res.status_code == 200, file_res.text
+    assert file_res.json()["success"] is True
+    created_file = vault_dir / "Projekte" / "KI" / "Notiz1.md"
+    assert created_file.is_file()
+    assert "# Notiz 1" in created_file.read_text(encoding="utf-8")
+
+    # 2. Verschieben: alter Pfad weg, neuer da
+    move_res = client.post(
+        "/files/move",
+        json={"path": "Projekte/KI/Notiz1.md", "new_path": "Projekte/Verschoben.md"},
+    )
+    assert move_res.status_code == 200, move_res.text
+    assert move_res.json()["success"] is True
+    assert not created_file.exists()
+    assert (vault_dir / "Projekte" / "Verschoben.md").is_file()
+
+    # 3. Bereits existierender Pfad -> 409
+    dup_file_res = client.post(
+        "/files/create-file",
+        json={"path": "Projekte/Verschoben.md", "content": "# Duplikat"},
+    )
+    assert dup_file_res.status_code == 409
+
+    # 4. Die Ordner-Route ist entfernt
+    gone = client.post("/files/create-folder", json={"path": "Projekte/Neu"})
+    assert gone.status_code in (404, 405)
+
+    # 5. Pfad-Traversierung wird abgelehnt, nichts entsteht ausserhalb des Vaults
+    outside_file = tmp_path / "escape.md"
+    traversal_res = client.post(
+        "/files/create-file",
+        json={"path": "../escape.md", "content": "# Escape"},
+    )
+    assert traversal_res.status_code in (400, 404)
+    assert not outside_file.exists()
+
+    traversal_move_res = client.post(
+        "/files/move",
+        json={"path": "Projekte/Verschoben.md", "new_path": "../escape.md"},
+    )
+    assert traversal_move_res.status_code in (400, 404)
+    assert not outside_file.exists()

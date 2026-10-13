@@ -3,17 +3,21 @@ import json
 import time
 from pathlib import Path
 
-from src.core.obsidian_processor import ObsidianVaultManager, is_summarizable_path
+from src.core.obsidian_processor import (
+    PENDING_SUMMARY_TEXT,
+    ObsidianVaultManager,
+    is_summarizable_path,
+)
 from src.core.scheduler import SummaryScheduler
 from src.core.logging_config import logger
-
-PENDING_SUMMARY_TEXT = "Zusammenfassung ausstehend..."
 
 
 def run_ai_map_maintenance(vault_root: Path, summary_scheduler: SummaryScheduler, interval_minutes: int):
     """Prüft in regelmäßigen Abständen die .ai_map.json:
     1. Einträge, deren Datei/Ordner nicht mehr existiert, werden entfernt.
-    2. Für Dateien mit noch ausstehender Zusammenfassung wird diese eingeplant.
+    2. Notizen, die auf der Platte liegen, aber (noch) nicht in der Map stehen, werden
+       nachgetragen - etwa wenn sie angelegt wurden, während der Server nicht lief.
+    3. Für Dateien mit noch ausstehender Zusammenfassung wird diese eingeplant.
     """
     ai_map_path = vault_root / ".ai_map.json"
     logger.info(f"[Maintenance] AI-Map-Wartung gestartet. Intervall: {interval_minutes} Minuten.")
@@ -49,7 +53,25 @@ def _check_ai_map(vault_root: Path, ai_map_path: Path, summary_scheduler: Summar
             del directories[rel_dir]
             changed = True
 
+    # Nachtragen: Notizen, die existieren, aber in der Map fehlen. Der Watchdog erledigt
+    # das im Betrieb sofort (siehe main.py on_created); dieser Durchlauf fängt die Fälle
+    # auf, in denen der Server beim Anlegen nicht lief.
+    for filepath in sorted(vault_root.rglob("*.md")):
+        if not is_summarizable_path(filepath):
+            continue
+        rel_path = filepath.relative_to(vault_root).as_posix()
+        if rel_path in files:
+            continue
+        logger.info(f"[Maintenance] Fehlende Notiz in AI-Map nachgetragen: {rel_path}")
+        files[rel_path] = PENDING_SUMMARY_TEXT
+        rel_dir = filepath.parent.relative_to(vault_root).as_posix()
+        if rel_dir not in (".", ""):
+            directories.setdefault(rel_dir, PENDING_SUMMARY_TEXT)
+        changed = True
+
     if changed:
+        ai_map["files"] = files
+        ai_map["directories"] = directories
         with open(ai_map_path, "w", encoding="utf-8") as f:
             json.dump(ai_map, f, indent=2, ensure_ascii=False)
         logger.info("[Maintenance] AI-Map bereinigt und gespeichert.")

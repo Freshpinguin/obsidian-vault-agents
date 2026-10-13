@@ -14,6 +14,10 @@ FRONTMATTER_PATTERN = re.compile(r"^---\n(.*?)\n---\n(.*)", re.DOTALL)
 # Regex für Obsidian-Wikilinks: [[Ziel]], [[Ziel|Anzeigetext]], [[Ziel#Abschnitt|Anzeigetext]]
 WIKILINK_PATTERN = re.compile(r"\[\[(.+?)\]\]")
 
+# Platzhalter, solange noch keine echte KI-Zusammenfassung existiert. Die periodische
+# Wartung (map_maintenance) erkennt genau diesen Text und plant die Zusammenfassung ein.
+PENDING_SUMMARY_TEXT = "Zusammenfassung ausstehend..."
+
 
 def get_content_hash(text: str) -> str:
     """Fingerabdruck des reinen Dokumenteninhalts (ohne Frontmatter)."""
@@ -326,3 +330,199 @@ def process_folder_summary(vault_root: Path, folder_path: Path) -> bool:
     manager.update_folder_data(folder_path, result)
     logger.info(f"[{dir_label}] .index.md und .ai_map.json (Ordner-Eintrag) aktualisiert!")
     return changed
+
+
+def register_pending_file(filepath: Path, vault_root: Path) -> bool:
+    """Tragt eine gerade erstellte Notiz SOFORT in die .ai_map.json ein - mit
+    Platzhalter-Zusammenfassung (PENDING_SUMMARY_TEXT) - und baut die Datei-Map in der
+    .index.md des uebergeordneten Ordners neu auf, damit die neue Datei dort unmittelbar
+    auftaucht, statt erst beim naechsten Wartungslauf.
+
+    Die echte Zusammenfassung erzeugt diese Funktion NICHT: Sie ruft keinen Agenten auf.
+    Der Platzhalter ist das Signal, an dem map_maintenance die Zusammenfassung einplant.
+
+    Gibt True zurueck, wenn ein Eintrag geschrieben wurde.
+    """
+    root = Path(vault_root).resolve()
+    target = Path(filepath).resolve()
+
+    # Systemdateien (.index.md, .ai_map.json, _-Praefix ...) gehoeren nicht in die Map.
+    if not is_summarizable_path(target):
+        return False
+
+    try:
+        rel_path = target.relative_to(root).as_posix()
+    except ValueError:
+        logger.warning(f"[Map] Datei liegt ausserhalb des Vaults, kein AI-Map-Eintrag: {target}")
+        return False
+
+    ai_map_path = root / ".ai_map.json"
+    ai_map = _load_ai_map(ai_map_path)
+
+    ai_map["files"][rel_path] = PENDING_SUMMARY_TEXT
+    _register_parent_dirs(ai_map, target, root)
+
+    with open(ai_map_path, "w", encoding="utf-8") as f:
+        json.dump(ai_map, f, indent=2, ensure_ascii=False)
+    logger.info(f"[Map] Neue Datei in AI-Map vorgemerkt: {rel_path}")
+
+    # Datei-Map der .index.md im Ordner neu aufbauen; schreibt nur bei echter Aenderung.
+    ObsidianVaultManager(root).refresh_file_map(target.parent)
+    return True
+
+
+def _load_ai_map(ai_map_path: Path) -> dict:
+    """Liest die .ai_map.json tolerant ein: fehlt sie oder ist sie beschaedigt, kommt
+    eine frische, leere Struktur zurueck."""
+    ai_map = {}
+    if ai_map_path.exists():
+        try:
+            with open(ai_map_path, "r", encoding="utf-8") as f:
+                ai_map = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            logger.error(f"[Map] .ai_map.json nicht lesbar, wird neu aufgebaut: {e}")
+            ai_map = {}
+    if not isinstance(ai_map, dict):
+        ai_map = {}
+    ai_map.setdefault("directories", {})
+    ai_map.setdefault("files", {})
+    return ai_map
+
+
+def _register_parent_dirs(ai_map: dict, target: Path, root: Path) -> None:
+    """Merkt alle uebergeordneten Ordner bis zum Vault-Root vor, ohne bereits
+    vorhandene Ordner-Zusammenfassungen zu ueberschreiben."""
+    for parent in target.parents:
+        if parent == root:
+            break
+        ai_map["directories"].setdefault(parent.relative_to(root).as_posix(), PENDING_SUMMARY_TEXT)
+
+
+def move_map_entry(old_path: Path, new_path: Path, vault_root: Path) -> bool:
+    """Zieht den .ai_map.json-Eintrag einer verschobenen/umbenannten Notiz mit um:
+    Der alte Schluessel verschwindet, der neue erhaelt die BISHERIGE Zusammenfassung
+    (keine Neu-Generierung – der Inhalt hat sich beim Verschieben nicht geaendert).
+    Fehlte der alte Eintrag, wird der neue als ausstehend vorgemerkt.
+
+    Danach werden die Datei-Maps der .index.md in Quell- UND Zielordner neu gebaut,
+    damit die Notiz dort nicht doppelt bzw. gar nicht auftaucht.
+
+    Gibt True zurueck, wenn ein Eintrag geschrieben wurde.
+    """
+    root = Path(vault_root).resolve()
+    source = Path(old_path)
+    target = Path(new_path).resolve()
+
+    if not is_summarizable_path(target):
+        return False
+
+    try:
+        rel_new = target.relative_to(root).as_posix()
+        # Die Quelle existiert nicht mehr; resolve() ohne strict ist hier korrekt.
+        rel_old = source.resolve().relative_to(root).as_posix()
+    except ValueError:
+        logger.warning(f"[Map] Verschiebung ausserhalb des Vaults, kein AI-Map-Eintrag: {source} -> {target}")
+        return False
+
+    ai_map_path = root / ".ai_map.json"
+    ai_map = _load_ai_map(ai_map_path)
+
+    carried = ai_map["files"].pop(rel_old, None) or PENDING_SUMMARY_TEXT
+    ai_map["files"][rel_new] = carried
+    _register_parent_dirs(ai_map, target, root)
+
+    with open(ai_map_path, "w", encoding="utf-8") as f:
+        json.dump(ai_map, f, indent=2, ensure_ascii=False)
+    logger.info(f"[Map] AI-Map-Eintrag verschoben: {rel_old} -> {rel_new}")
+
+    manager = ObsidianVaultManager(root)
+    for folder in {source.parent, target.parent}:
+        if folder.is_dir():
+            manager.refresh_file_map(folder)
+    return True
+
+
+def register_pending_directory(dirpath: Path, vault_root: Path) -> bool:
+    """Traegt einen neu erstellten Ordner SOFORT in die .ai_map.json ein, damit er in
+    format_ai_map() auftaucht - sonst koennte ein Agent einen Ordner anlegen, den er
+    danach selbst nicht sieht. Bereits vorhandene Ordner-Zusammenfassungen bleiben
+    unberuehrt; die echte Zusammenfassung erzeugt spaeter die Folder-Summary-Pipeline.
+
+    Gibt True zurueck, wenn ein neuer Eintrag entstanden ist.
+    """
+    root = Path(vault_root).resolve()
+    target = Path(dirpath).resolve()
+
+    if target == root or not target.is_dir():
+        return False
+    # Versteckte / technische Ordner (.git, .obsidian ...) gehoeren nicht in die Map.
+    if any(part.startswith(".") or part.startswith("_") for part in target.parts[len(root.parts):]):
+        return False
+
+    try:
+        rel_dir = target.relative_to(root).as_posix()
+    except ValueError:
+        logger.warning(f"[Map] Ordner liegt ausserhalb des Vaults, kein AI-Map-Eintrag: {target}")
+        return False
+
+    ai_map_path = root / ".ai_map.json"
+    ai_map = _load_ai_map(ai_map_path)
+
+    if rel_dir in ai_map["directories"]:
+        return False
+
+    ai_map["directories"][rel_dir] = PENDING_SUMMARY_TEXT
+    _register_parent_dirs(ai_map, target, root)
+
+    with open(ai_map_path, "w", encoding="utf-8") as f:
+        json.dump(ai_map, f, indent=2, ensure_ascii=False)
+    logger.info(f"[Map] Neuer Ordner in AI-Map vorgemerkt: {rel_dir}")
+    return True
+
+
+def remove_map_entry(path: Path, vault_root: Path) -> bool:
+    """Entfernt den .ai_map.json-Eintrag einer geloeschten Notiz bzw. eines geloeschten
+    Ordners - samt ALLER Eintraege darunter, denn mit einem Ordner verschwindet sein
+    gesamter Inhalt.
+
+    Der Pfad existiert zum Aufrufzeitpunkt nicht mehr, deshalb laesst sich Datei und
+    Ordner nicht mehr unterscheiden: Es werden schlicht alle Schluessel entfernt, die
+    exakt passen oder unterhalb des Pfads liegen. Fuer eine Datei trifft das genau
+    einen Schluessel.
+
+    Gibt True zurueck, wenn mindestens ein Eintrag entfernt wurde.
+    """
+    root = Path(vault_root).resolve()
+    target = Path(path)
+
+    try:
+        rel = target.resolve().relative_to(root).as_posix()
+    except ValueError:
+        return False
+    if not rel or rel == ".":
+        return False
+
+    ai_map_path = root / ".ai_map.json"
+    if not ai_map_path.exists():
+        return False
+    ai_map = _load_ai_map(ai_map_path)
+
+    prefix = f"{rel}/"
+    removed: list[str] = []
+    for section in ("files", "directories"):
+        for key in [k for k in ai_map[section] if k == rel or k.startswith(prefix)]:
+            del ai_map[section][key]
+            removed.append(key)
+
+    if not removed:
+        return False
+
+    with open(ai_map_path, "w", encoding="utf-8") as f:
+        json.dump(ai_map, f, indent=2, ensure_ascii=False)
+    logger.info(f"[Map] {len(removed)} AI-Map-Eintrag/-Eintraege entfernt fuer: {rel}")
+
+    # Datei-Map im uebergeordneten Ordner neu bauen, damit der Eintrag dort verschwindet.
+    parent = target.parent
+    if parent.is_dir():
+        ObsidianVaultManager(root).refresh_file_map(parent)
+    return True

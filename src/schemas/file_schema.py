@@ -81,3 +81,22 @@ class DeleteFileResponse(BaseModel):
     success: bool
     message: str
 
+
+class MoveNodeRequest(BaseModel):
+    """Anfrage zum Verschieben einer Datei oder Notiz im Vault."""
+    path: str
+    new_path: str
+
+
+class CreateNoteRequest(BaseModel):
+    """Anfrage zum Erstellen einer neuen Notizdatei im Vault."""
+    path: str
+    content: str = ""
+
+
+class MutationResponse(BaseModel):
+    """Standard-Antwortmodell für schreibende Datei- und Ordneroperationen."""
+    path: str
+    success: bool
+    message: str
+
