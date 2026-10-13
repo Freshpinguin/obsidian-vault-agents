@@ -1,12 +1,14 @@
 # src/agentic/__init__.py
-from src.agentic.engine import (
-    continue_chat_session,
-    run_agent_session,
-    start_chat_session,
-)
+"""Fassade des agentic-Pakets: die fünf nach außen angebotenen Symbole."""
+from src.agentic.agents.chat import continue_wiki_chat, start_wiki_chat
+from src.agentic.agents.folder_summarizer import FolderSummarizerAgent
+from src.agentic.agents.summarizer import SummarizerAgent
+from src.agentic.engine import run_agent_session
 
 __all__ = [
-    "continue_chat_session",
+    "start_wiki_chat",
+    "continue_wiki_chat",
     "run_agent_session",
-    "start_chat_session",
+    "SummarizerAgent",
+    "FolderSummarizerAgent",
 ]

@@ -279,8 +279,7 @@ def process_obsidian_file(vault_root: Path, filepath: Path) -> bool:
     logger.info(f"[{filepath.name}] Baue Summaries auf Basis von Obsidian-Daten...")
 
     # 3. Agent ausführen
-    from src.agentic.engine import run_agent_session
-    from src.agentic.agents.summarizer import SummarizerAgent
+    from src.agentic import SummarizerAgent, run_agent_session
     session = run_agent_session(agent=SummarizerAgent, raw_input=input_data)
 
     # 4. Speichern
@@ -312,8 +311,7 @@ def process_folder_summary(vault_root: Path, folder_path: Path) -> bool:
 
     logger.info(f"[{dir_label}] Baue Ordner-Zusammenfassung...")
 
-    from src.agentic.engine import run_agent_session
-    from src.agentic.agents.folder_summarizer import FolderSummarizerAgent
+    from src.agentic import FolderSummarizerAgent, run_agent_session
     session = run_agent_session(agent=FolderSummarizerAgent, raw_input=input_data)
 
     if not session.is_successful:

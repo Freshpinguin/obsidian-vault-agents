@@ -1,5 +1,4 @@
-# src/routes/session/post_session.py
-from src.agentic.agents.chat import start_wiki_chat
+from src.agentic import start_wiki_chat
 from src.schemas.session_schema import ChatReplyResponse, StartSessionRequest
 from src.routes.session import router
 from src.routes.session.storage import _sessions, _sessions_lock, reply_or_502
