@@ -7,7 +7,7 @@ from typing import Any
 from src.schemas.llm_models import FALLBACK_MAP, LLMModels
 from src.schemas.status import AgentStatus
 from src.core.logging_config import logger, SessionLogger
-from src.agents.context_compactor import maybe_compact
+from src.agentic.context_compactor import maybe_compact
 
 from src.schemas.agent_schema import (
     WikiAgent,

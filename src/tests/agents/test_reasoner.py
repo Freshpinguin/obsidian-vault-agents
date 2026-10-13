@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 
-from src.agents.reasoner import (
+from src.agentic.agents.reasoner import (
     MODEL,
     SYSTEM_INSTRUCTIONS,
     run_reasoning,

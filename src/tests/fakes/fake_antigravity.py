@@ -1,4 +1,4 @@
-"""Attrappe für ``google.antigravity.Agent``, den ``src.agents.reasoner`` nutzt.
+"""Attrappe für ``google.antigravity.Agent``, den ``src.agentic.agents.reasoner`` nutzt.
 
 Der echte Aufruf ist::
 
@@ -9,7 +9,7 @@ Der echte Aufruf ist::
 Beispiel::
 
     fake = FakeAntigravity(reply="Ausgearbeiteter Text")
-    monkeypatch.setattr("src.agents.reasoner.Agent", fake)
+    monkeypatch.setattr("src.agentic.agents.reasoner.Agent", fake)
     run_reasoning("Denk nach")
     assert fake.prompts == ["Denk nach"]
 """

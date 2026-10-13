@@ -3,14 +3,14 @@ import pkgutil
 from pathlib import Path
 import pytest
 
-from src.agents.chat import ChatAgent, start_wiki_chat
-from src.agents.task_agent import TaskAgent, start_background_task, _jobs, _MODEL_ROTATION as TASK_ROTATION
-from src.agents.librarian import LibrarianAgent, ask_librarian, _MODEL_ROTATION as LIBRARIAN_ROTATION
-from src.agents.summarizer import SummarizerAgent
-from src.agents.folder_summarizer import FolderSummarizerAgent
-from src.agents.context_compactor import maybe_compact, context_size_chars
-from src.agents.web_search import web_search, MODEL as WEB_SEARCH_MODEL
-from src.agents.reasoner import run_reasoning, MODEL as REASONER_MODEL
+from src.agentic.agents.chat import ChatAgent, start_wiki_chat
+from src.agentic.agents.task_agent import TaskAgent, start_background_task, _jobs, _MODEL_ROTATION as TASK_ROTATION
+from src.agentic.agents.librarian import LibrarianAgent, ask_librarian, _MODEL_ROTATION as LIBRARIAN_ROTATION
+from src.agentic.agents.summarizer import SummarizerAgent
+from src.agentic.agents.folder_summarizer import FolderSummarizerAgent
+from src.agentic.context_compactor import maybe_compact, context_size_chars
+from src.agentic.agents.web_search import web_search, MODEL as WEB_SEARCH_MODEL
+from src.agentic.agents.reasoner import run_reasoning, MODEL as REASONER_MODEL
 from src.core.obsidian_processor import process_obsidian_file, process_folder_summary
 from src.schemas.agent_schema import AgentSession, MessageRole, SessionMessage, ToolCall, WikiAgent
 from src.schemas.folder_summarizer_schema import FolderSummarizerOutput
@@ -23,13 +23,13 @@ EXPECTED_WIKI_AGENTS = {"Chat", "TaskAgent", "Librarian", "Summarizer", "FolderS
 
 
 def test_meta_all_wiki_agents_registered():
-    """Findet per Introspektion alle WikiAgent-Instanzen in src.agents und prüft,
+    """Findet per Introspektion alle WikiAgent-Instanzen in src.agentic.agents und prüft,
     dass jeder Agent in EXPECTED_WIKI_AGENTS vorkommt."""
-    import src.agents as agents_pkg
+    import src.agentic.agents as agents_pkg
 
     found_agents = {}
     for _, module_name, _ in pkgutil.iter_modules(agents_pkg.__path__):
-        mod = importlib.import_module(f"src.agents.{module_name}")
+        mod = importlib.import_module(f"src.agentic.agents.{module_name}")
         for attr_name in dir(mod):
             val = getattr(mod, attr_name)
             if isinstance(val, WikiAgent):

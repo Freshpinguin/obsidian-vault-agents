@@ -1,7 +1,7 @@
 import pytest
 
-import src.agents.web_search as web_search_mod
-from src.agents.web_search import (
+import src.agentic.agents.web_search as web_search_mod
+from src.agentic.agents.web_search import (
     MODEL,
     SYSTEM_INSTRUCTION,
     web_search,

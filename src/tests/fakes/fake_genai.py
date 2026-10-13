@@ -1,9 +1,9 @@
-"""Attrappe für den ``google.genai``-Client, den ``src.agents.web_search`` nutzt.
+"""Attrappe für den ``google.genai``-Client, den ``src.agentic.agents.web_search`` nutzt.
 
 Beispiel::
 
     fake = FakeGenAIClient(text="Warp ist spekulativ.", sources=[("NASA", "https://nasa.gov/warp")])
-    monkeypatch.setattr("src.agents.web_search._get_client", lambda: fake)
+    monkeypatch.setattr("src.agentic.agents.web_search._get_client", lambda: fake)
     web_search("Ist Warp realistisch?")
     assert fake.calls[0]["model"] == web_search_module.MODEL
 """

@@ -151,12 +151,12 @@ class FakeLLM:
     # ----------------------------------------------------------------- Routing
 
     def _register_defaults(self) -> None:
-        from src.agents.chat import ChatAgent
-        from src.agents.context_compactor import COMPACTION_SYSTEM_PROMPT
-        from src.agents.folder_summarizer import FolderSummarizerAgent
-        from src.agents.librarian import LibrarianAgent
-        from src.agents.summarizer import SummarizerAgent
-        from src.agents.task_agent import TaskAgent
+        from src.agentic.agents.chat import ChatAgent
+        from src.agentic.context_compactor import COMPACTION_SYSTEM_PROMPT
+        from src.agentic.agents.folder_summarizer import FolderSummarizerAgent
+        from src.agentic.agents.librarian import LibrarianAgent
+        from src.agentic.agents.summarizer import SummarizerAgent
+        from src.agentic.agents.task_agent import TaskAgent
 
         for agent in (ChatAgent, TaskAgent, LibrarianAgent, SummarizerAgent, FolderSummarizerAgent):
             self.register(agent.name, agent.system_prompt)

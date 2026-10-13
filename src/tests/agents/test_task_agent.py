@@ -2,8 +2,8 @@ import time
 from pathlib import Path
 import pytest
 
-from src.agents import task_agent
-from src.agents.task_agent import (
+from src.agentic.agents import task_agent
+from src.agentic.agents.task_agent import (
     TaskAgent,
     check_task_status,
     start_background_task,
@@ -11,7 +11,7 @@ from src.agents.task_agent import (
     _MODEL_ROTATION,
 )
 from src.schemas.llm_models import LLMModels
-from src.agents.shared_tools import CONTENT_TOOLS
+from src.agentic.shared_tools import CONTENT_TOOLS
 from src.tests.fakes.fake_llm import FakeLLM, final, raw, tool_calls
 
 

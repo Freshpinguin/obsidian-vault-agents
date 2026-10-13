@@ -72,8 +72,8 @@ def _no_network(monkeypatch, request):
     if request.node.get_closest_marker("live"):
         yield
         return
-    import src.agents.reasoner as reasoner
-    import src.agents.web_search as web_search
+    import src.agentic.agents.reasoner as reasoner
+    import src.agentic.agents.web_search as web_search
 
     monkeypatch.setattr(litellm, "completion", _forbidden("litellm.completion"))
     monkeypatch.setattr(web_search, "_get_client", _forbidden("google.genai"))
@@ -92,7 +92,7 @@ def fake_llm(monkeypatch, _no_network):
 
     fake = FakeLLM()
     monkeypatch.setattr(litellm, "completion", fake)
-    monkeypatch.setattr("src.agents.llm_engine.supports_tool_choice", lambda model: True)
+    monkeypatch.setattr("src.agentic.llm_engine.supports_tool_choice", lambda model: True)
     yield fake
     fake.assert_clean()
 
@@ -102,7 +102,7 @@ def fake_genai(monkeypatch, _no_network):
     from src.tests.fakes.fake_genai import FakeGenAIClient
 
     client = FakeGenAIClient()
-    monkeypatch.setattr("src.agents.web_search._get_client", lambda: client)
+    monkeypatch.setattr("src.agentic.agents.web_search._get_client", lambda: client)
     return client
 
 
@@ -111,7 +111,7 @@ def fake_antigravity(monkeypatch, _no_network):
     from src.tests.fakes.fake_antigravity import FakeAntigravity
 
     fake = FakeAntigravity()
-    monkeypatch.setattr("src.agents.reasoner.Agent", fake)
+    monkeypatch.setattr("src.agentic.agents.reasoner.Agent", fake)
     return fake
 
 
@@ -134,12 +134,12 @@ class _SyncThread:
 @pytest.fixture
 def sync_threads(monkeypatch):
     """Lässt start_background_task synchron laufen (Task-Agent im selben Thread)."""
-    monkeypatch.setattr("src.agents.task_agent.threading.Thread", _SyncThread)
+    monkeypatch.setattr("src.agentic.agents.task_agent.threading.Thread", _SyncThread)
 
 
 @pytest.fixture(autouse=True)
 def _reset_global_state(monkeypatch):
-    from src.agents import librarian, task_agent
+    from src.agentic.agents import librarian, task_agent
     from src.routes.session import storage
 
     task_agent._jobs.clear()

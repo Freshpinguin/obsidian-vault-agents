@@ -8,9 +8,9 @@ from src.schemas.chat_schema import (
 )
 from src.schemas.llm_models import LLMModels
 from src.schemas.tool_schema import WikiTool
-from src.agents.llm_engine import continue_chat_session, start_chat_session
-from src.agents.shared_tools import CONTENT_TOOLS
-from src.agents.task_agent import check_task_status, start_background_task
+from src.agentic.llm_engine import continue_chat_session, start_chat_session
+from src.agentic.shared_tools import CONTENT_TOOLS
+from src.agentic.agents.task_agent import check_task_status, start_background_task
 from src.navigation import load_ai_map, format_ai_map
 
 SYSTEM_PROMPT = """Du bist der Chat-Assistent eines persönlichen Obsidian-Wikis (Science-Fiction-Weltenbau).

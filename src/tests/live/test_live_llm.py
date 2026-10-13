@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import pytest
 
-from src.agents.chat import start_wiki_chat
+from src.agentic.agents.chat import start_wiki_chat
 
 # Skip unless OVA_LIVE_TESTS=1
 pytestmark = [

@@ -8,9 +8,9 @@ from src.schemas.chat_schema import AskLibrarianArgs, CreateDirectoryArgs, Creat
 from src.schemas.reasoner_schema import ReasoningArgs
 from src.schemas.tool_schema import WikiTool
 from src.schemas.web_search_schema import WebSearchArgs
-from src.agents.librarian import ask_librarian, files_tool
-from src.agents.reasoner import run_reasoning
-from src.agents.web_search import web_search
+from src.agentic.agents.librarian import ask_librarian, files_tool
+from src.agentic.agents.reasoner import run_reasoning
+from src.agentic.agents.web_search import web_search
 from src.navigation import create_directory, create_file, edit_file, load_files, move_file, delete_file
 
 

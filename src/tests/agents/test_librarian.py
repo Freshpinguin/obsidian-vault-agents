@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 
-from src.agents.librarian import (
+from src.agentic.agents.librarian import (
     LibrarianAgent,
     ask_librarian,
     _MODEL_ROTATION,

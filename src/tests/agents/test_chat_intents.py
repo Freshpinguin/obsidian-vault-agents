@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 
-from src.agents.chat import ChatAgent, start_wiki_chat
+from src.agentic.agents.chat import ChatAgent, start_wiki_chat
 from src.tests.fakes.fake_llm import FakeLLM, final
 
 

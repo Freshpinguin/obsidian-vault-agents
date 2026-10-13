@@ -1,8 +1,8 @@
 from pathlib import Path
 import pytest
 
-from src.agents.chat import ChatAgent, start_wiki_chat
-from src.agents import task_agent
+from src.agentic.agents.chat import ChatAgent, start_wiki_chat
+from src.agentic.agents import task_agent
 from src.tests.fakes.fake_llm import FakeLLM, final, tool_calls
 
 

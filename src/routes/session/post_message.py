@@ -1,5 +1,5 @@
 # src/routes/session/post_message.py
-from src.agents.chat import continue_wiki_chat
+from src.agentic.agents.chat import continue_wiki_chat
 from src.schemas.session_schema import ChatMessageRequest, ChatReplyResponse
 from src.routes.session import router
 from src.routes.session.storage import _sessions, _sessions_lock, get_session, reply_or_502
