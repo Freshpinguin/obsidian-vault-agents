@@ -1,35 +1,98 @@
 ---
 tags:
 - meeting
-- decisions
-ai_summary: 'Running decision log from the Atlas meetings, as opposed to the architectural
-  records: each entry has a date, the decision, who made it and why. Covers the daily-batch
-  choice, trimming the usage source to two tables, the part-time analyst arrangement
-  and deferring row-level access control to a later milestone.'
-content_hash: fadd75d2f42f362b9e91f266fb022549
+- adr
+ai_summary: 'The decision log: seven architecture-style decision records covering
+  the roster strategy, the no-caging rule, the capybara subsidy, the bat labelling
+  compromise, the abandoned penguin line, the unresolved supplier concentration and
+  the deferred question of whether the animal matters at all.'
+content_hash: 79daaff0453006bbdcd0ecdad7e44b3b
 linked_files:
-- Architecture/Decisions
-- Overview.md
-last_modified: '2026-10-13 18:40:00'
+- Market/Customer-Research.md
+- Animals/Sloth.md
+- Legal/Regulatory.md
+- Animals/Capybara.md
+- Operations/Supply-Chain.md
+- Animals/Bat.md
+- Brand/Tasting-Notes.md
+- Animals/Penguin.md
+- Animals/Civet.md
+- Market/Competitors.md
+last_modified: '2026-10-13 22:12:22'
 ---
-# Decision Log (meetings)
+# Decisions
 
-Decisions taken in meetings, with enough context that nobody has to re-litigate them.
-Technical decisions with lasting structural consequences live in
-[[Architecture/Decisions]] instead.
+Decision records, in the order they were made. Each one states the context, the decision
+and what it cost us.
 
-| # | Week | Decision | Decided by | Why |
-|---|---|---|---|---|
-| 1 | 1 | Billing is the first data source | team, at kickoff | smallest source that exercises the whole pipeline |
-| 2 | 1 | Daily batch, not streaming | team, at kickoff | no known use case needs fresher than daily |
-| 3 | 2 | Analyst is a part-time team member, not a reviewer | EM | feedback during the build, not after |
-| 4 | 5 | Row-level access control deferred to M3+ | operations lead | no external users before M3, so no urgency |
-| 5 | 8 | Usage source trimmed to two tables | team | unblocks M2; the rest is unused today |
+## ADR-1: A roster, not a product
 
-## Reversed
+**Context.** Every existing producer in this category sells one animal.
 
-| # | Week | Decision | Why it was reversed |
-|---|---|---|---|
-| R1 | 4 | "Keep the spreadsheets running in parallel indefinitely" | parallel maintenance cost more than the migration; now parallel for one month only |
+**Decision.** Build a roster of many animals.
 
-Scope context is in [[Overview]].
+**Cost.** Nine supply chains instead of one, nine welfare arrangements, nine processing
+profiles. In exchange, a collector segment that returns (see
+[[Market/Customer-Research]]) and a competitive position no single-animal producer can
+copy quickly.
+
+## ADR-2: Never cage, never force-feed
+
+**Context.** Demand for Kopi Luwak outran wild supply and the industry caged civets. The
+coffee got worse and the reputation got much worse.
+
+**Decision.** Every animal is fed on its own schedule and is never confined for
+production.
+
+**Cost.** Our yields are unpredictable and our forecasting is poor, most visibly on
+[[Animals/Sloth]]. This is the constraint the entire operation is built around, and it is
+also the only reason [[Legal/Regulatory]] signs off.
+
+## ADR-3: One boring animal pays for the interesting ones
+
+**Context.** The best products have the worst yields.
+
+**Decision.** [[Animals/Capybara]] is the commercial base. Everything else is a halo line.
+
+**Cost.** 70% revenue concentration in one supplier, which is the red entry in
+[[Operations/Supply-Chain]] and has been for three quarters.
+
+## ADR-4: Bat coffee is labelled "selected", not "digested"
+
+**Context.** Fruit bats chew and spit the bean. Nothing is digested. It is also our best
+coffee.
+
+**Decision.** Sell it as "bat-selected, wild-fermented". No digestion claim.
+
+**Cost.** Our strongest product cannot use our strongest marketing angle. See
+[[Animals/Bat]] and [[Brand/Tasting-Notes]].
+
+## ADR-5: Penguin line abandoned
+
+**Context.** "Naturally cold-processed" is an excellent line on a bag.
+
+**Decision.** Abandoned. Penguins are carnivores and coffee does not grow near them.
+
+**Cost.** None, beyond the meeting. The cold was always doing the work, not the penguin.
+See [[Animals/Penguin]].
+
+## ADR-6: Second cherry supplier — not done
+
+**Context.** Both cherry farms are in one growing region.
+
+**Decision.** Agreed, then not executed, for three quarters running.
+
+**Cost.** Still an open amber risk. This record exists mainly so the next person to ask
+can see that we already agreed and still did nothing.
+
+## ADR-7: The animal question — deferred
+
+**Context.** Our own blind tasting put a plain washed Ethiopian second out of six, ahead
+of four of our lines and ahead of [[Animals/Civet]]. Lab ferment startups now reproduce
+the flavour with no animal at all (see [[Market/Competitors]]).
+
+**Decision.** Deferred. Formally, explicitly deferred.
+
+**Cost.** If the flavour was never the point, we are a story company with a very expensive
+logistics operation, and we should know that before the market tells us. Nobody wants to be
+the one to open this, so it sits here, numbered, waiting.

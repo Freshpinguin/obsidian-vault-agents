@@ -1,20 +1,35 @@
 {
   "directories": {
-    "Meetings": "Meeting notes, decision log and stakeholder map.",
-    "Architecture": "Pipeline design, decision records and deployment notes."
+    "Animals": "The supplier roster, one note per animal: the civet as the category incumbent, the capybara as the commercial base, the elephant and bat as the flavour leaders, and the penguin, honey badger, sloth, ostrich and goat lines with their yields, risks and suspensions.",
+    "Operations": "How the product is actually made: the retrieval SOP and its hard time limits, supply chain transit times and risk register, the quality control defect classes, and the facilities layout the smell forced on us.",
+    "Market": "Commercial analysis: labour-based pricing with the elephant line as a deliberate decoy, three customer segments of which only one drinks the coffee, and the lab-ferment competitors who beat us on every factor except the story.",
+    "Brand": "Naming and language: approved line names with the long list of rejected ones, the three naming rules, the approved tasting vocabulary and the banned words that are accurate but unsellable.",
+    "Legal": "Compliance and incidents: the three regulatory frameworks this product sits inside at once, the open neighbour complaint, and the incident log in which every entry changed a policy.",
+    "Meetings": "The founding record: the kickoff that identified the premium as a story rather than a flavour, and seven decision records including the deferred question of whether the animal matters at all."
   },
   "files": {
-    "Overview.md": "Atlas project overview: goals, scope, milestones and success metrics.",
-    "Meetings/Kickoff.md": "Kickoff meeting: problem statement, agreed goals and first data source.",
-    "Meetings/Weekly-Sync.md": "Format and running log of the weekly sync, most recent weeks first.",
-    "Meetings/Decisions.md": "Running log of decisions taken in meetings, with rationale.",
-    "Meetings/Stakeholders.md": "Who signs off on what, and how often each group expects an update.",
-    "Meetings/Planning.md": "Summary pending...",
-    "Meetings/Retro.md": "Summary pending...",
-    "Architecture/Data-Pipeline.md": "Four-stage daily batch ingestion pipeline and its failure behaviour.",
-    "Architecture/Decisions.md": "Architecture decision records: schema, batch vs streaming, transforms.",
-    "Architecture/Deployment.md": "Deployment process notes, infrastructure components, and identified gaps for pipeline jobs.",
-    "Architecture-Decisions-Copy.md": "Summary pending...",
-    "Architecture/Alternative-Streaming.md": "Summary pending..."
+    "Overview.md": "Second Pass Coffee company overview: the thesis that Kopi Luwak proved customers will pay a premium for digested coffee, the plan to extend that to other animals, current milestones and the four metrics the company is run on.",
+    "Animals/Civet.md": "The Asian palm civet as the category incumbent behind Kopi Luwak: proven price point, proven customer, and the caged-production scandals that define the ethical floor every other animal in the roster is measured against.",
+    "Animals/Elephant.md": "The elephant line (the Black Ivory model): the best flavour profile in the roster, produced by fermentation in a herbivore gut, undermined by a yield ratio of roughly 33 to 1 and the retrieval problem that ratio creates.",
+    "Animals/Capybara.md": "The capybara: the roster's best operational performer. Cooperative, unbothered, predictable output, and the only supplier whose retrieval procedure has never produced an incident report. The basis of the house blend.",
+    "Animals/Penguin.md": "Full post-mortem of the abandoned penguin line: the cold-brew pitch, a feeding trial in which eleven of fourteen birds refused the cherry outright, the caffeine problem caused by the three that did not, the tasting panel that resigned rather than drink the result, and the control batch with no penguin in it that tasted the same.",
+    "Animals/Sloth.md": "The sloth line: a genuinely long fermentation caused by the slowest digestion of any mammal, which produces a distinctive deep flavour and a two-week supply lag that makes demand forecasting nearly impossible.",
+    "Animals/Honey-Badger.md": "The honey badger line: highest measured caffeine in the roster and the only supplier that has been suspended on safety grounds, following three incidents in one quarter and a facilities bill for a reinforced enclosure.",
+    "Animals/Ostrich.md": "The ostrich line: a bird that swallows stones to grind its food and therefore returns coffee pre-ground, a genuine processing saving that is partly cancelled by inconsistent particle size and the need to screen grit out of every batch.",
+    "Animals/Bat.md": "The bat line: the roster's most defensible flavour claim and its least defensible category claim, since fruit bats chew the cherry and spit the bean rather than digesting it, leaving the product a fermentation story rather than a digestion one.",
+    "Animals/Goat.md": "The goat line as the company's heritage product, tied to the Kaldi origin legend in which goats discovered coffee, and sold on that story despite an unremarkable cup and a goat that will eat the packaging as readily as the cherry.",
+    "Operations/Retrieval.md": "The retrieval standard operating procedure: the four-stage process from feeding window to washed bean, the two-person rule, the time limits that protect flavour, and the vocabulary policy that governs how the step is described outside the company.",
+    "Operations/Supply-Chain.md": "Supply chain structure and risk register: transit times per animal, the single-supplier concentration on the capybara line that is the company's only red risk, and the two-week forecasting lag the sloth line forces on planning.",
+    "Operations/Quality-Control.md": "The quality control protocol: what counts as a defect in a product of this kind, the double screening the ostrich line requires, rejection rates per animal, and the one defect class that goes straight to the incident log instead of the reject bin.",
+    "Operations/Facilities.md": "Facilities notes: the wash house, the drying shed, the separate roastery the smell forced us to build, the quoted reinforced enclosure the honey badger line cannot pay for, and the one neighbour complaint that shaped the whole site layout.",
+    "Market/Pricing.md": "The pricing model: a floor set by retrieval hours rather than cherry cost, a ceiling anchored to Kopi Luwak's established price, and the finding that the halo lines exist mainly to make the capybara house blend look reasonably priced.",
+    "Market/Customer-Research.md": "Customer research findings: three distinct segments (gift buyers, collectors, actual coffee drinkers), the 4% novelty repeat rate against 40% for the house blend, and the blind-tasting result that undermines the premise the company is built on.",
+    "Market/Competitors.md": "Competitive landscape: the established Kopi Luwak and Black Ivory producers, the lab fermentation startups that reproduce the flavour without an animal and represent the real long-term threat, and why neither set competes with us on the story.",
+    "Brand/Naming.md": "Product naming: the approved line names, the long list of rejected ones, and the three rules the rejections produced about never naming the mechanism, never being cute about the animal, and never using a word that makes the customer picture the process.",
+    "Brand/Tasting-Notes.md": "The tasting vocabulary problem: an approved descriptor list, a banned list of words that are accurate but unsellable, and the standing rule that a note must describe the cup rather than the journey the bean took to reach it.",
+    "Legal/Regulatory.md": "Regulatory position: the three frameworks this product sits inside at once (food hygiene, animal welfare, novel food labelling), what each one requires of us, and the single open compliance item left from the Q2 neighbour complaint.",
+    "Legal/Incidents.md": "The incident log: seven entries covering the lost first batch, the caffeinated penguins of the abandoned cold-brew trial, three honey badger events in one quarter, the class D quality failure that produced the four-hour wash limit, and the upheld neighbour complaint, with the policy change each one caused.",
+    "Meetings/Kickoff.md": "The kickoff meeting: the original Kopi Luwak observation that started the company, the question the founders could not answer about why one animal should hold the whole category, and the four decisions taken in the first hour.",
+    "Meetings/Decisions.md": "The decision log: seven architecture-style decision records covering the roster strategy, the no-caging rule, the capybara subsidy, the bat labelling compromise, the abandoned penguin line, the unresolved supplier concentration and the deferred question of whether the animal matters at all."
   }
 }

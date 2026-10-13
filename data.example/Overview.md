@@ -1,56 +1,56 @@
 ---
 tags:
-- project
-ai_summary: 'Project overview for Atlas, the internal analytics platform: goals for
-  the current quarter, scope boundaries, the three delivery milestones and the core
-  team. Names the success metrics (query latency, adoption) and points to [[Architecture/Data-Pipeline]]
-  for the technical design and [[Meetings/Kickoff]] for the original scoping discussion.'
-content_hash: 38d6a21e78618b7fee4f6b7e50511f1f
+- overview
+ai_summary: 'Second Pass Coffee company overview: the thesis that Kopi Luwak proved
+  customers will pay a premium for digested coffee, the plan to extend that to other
+  animals, current milestones and the four metrics the company is run on.'
+content_hash: 156be9c2b0730b7025aeb1a08d5820f1
 linked_files:
-- Meetings/Stakeholders
-- Architecture/Data-Pipeline
-- Meetings/Kickoff
-last_modified: '2026-10-13 18:40:00'
+- Animals/Capybara.md
+- Operations/Retrieval.md
+- Market/Pricing.md
+- Animals/Elephant.md
+- Legal/Incidents.md
+last_modified: '2026-10-13 22:12:22'
 ---
-# Atlas — Project Overview
+# Second Pass Coffee
 
-Atlas is the internal analytics platform that replaces the three spreadsheet-based
-reporting flows the operations team maintains by hand today.
+Kopi Luwak sells for up to 600 EUR per kilogram. It is coffee that has been eaten by a
+civet, passed through the civet, and then collected, washed and roasted. The market for
+it has existed for decades and shows no sign of embarrassment.
 
-## Why we are doing this
+Our thesis is narrow: the civet is not special. The premium is not paid for the civet.
+It is paid for the story, the scarcity, and the fact that the customer can tell someone
+about it afterwards. If that is true, the category generalises.
 
-Operations currently spends roughly a day and a half each week rebuilding the same
-reports. The numbers disagree between teams because every report pulls from a
-slightly different export. Atlas gives everyone one queryable source.
+## What we do
 
-## Goals for this quarter
+We identify animals whose digestion plausibly improves a coffee bean, secure a humane
+supply arrangement, and sell the result at a price that reflects the retrieval effort.
 
-1. One ingestion pipeline covering the billing, support and usage data sources.
-2. A query layer the operations team can use without writing SQL.
-3. Daily refresh, with a clear freshness indicator on every dashboard.
-
-## Out of scope
-
-- Real-time streaming. Daily batch is enough for every known use case.
-- Replacing the finance team's reconciliation process.
-- External/customer-facing dashboards.
+The animal roster lives in [[Animals/Capybara]] and its neighbours. Retrieval is
+documented in [[Operations/Retrieval]]. Pricing logic is in [[Market/Pricing]].
 
 ## Milestones
 
-| Milestone | Target | Status |
+| Milestone | Scope | Status |
 |---|---|---|
-| M1 — billing source ingested end to end | week 4 | done |
-| M2 — support + usage sources, unified schema | week 8 | in progress |
-| M3 — query layer and first three dashboards | week 12 | not started |
+| M1 | One animal, one roast, fifty customers | done |
+| M2 | Three animals, repeatable retrieval SOP | in progress |
+| M3 | Retail packaging and a tasting vocabulary that survives legal review | planned |
+| M4 | Second facility, because of the smell | planned |
 
-## Success metrics
+## Metrics we actually watch
 
-- p95 dashboard query under 2 seconds.
-- Operations reports rebuilt by hand: zero by end of quarter.
-- At least five people outside the project team running their own queries.
+- **Yield ratio** — kilograms of cherry in to kilograms of sellable bean out. See
+  [[Animals/Elephant]] for why this metric exists.
+- **Retrieval hours per kilogram** — the real cost driver. Nobody believes this until
+  they do it once.
+- **Repeat rate** — a novelty purchase converts at about 4%. A good coffee converts at
+  40%. We need to know which business we are in.
+- **Incidents per quarter** — see [[Legal/Incidents]]. This number is not allowed to go up.
 
-## Team
+## What we are not
 
-Four people, roughly 60% allocated. See [[Meetings/Stakeholders]] for who signs off
-on what. The technical design lives in [[Architecture/Data-Pipeline]], and the
-original scoping conversation is captured in [[Meetings/Kickoff]].
+We are not a zoo, a sanctuary, or a wellness brand. Every animal in the roster is a
+supplier with a feeding schedule, and we are audited on that basis.

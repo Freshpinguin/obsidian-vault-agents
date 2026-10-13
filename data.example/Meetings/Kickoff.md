@@ -1,49 +1,52 @@
 ---
 tags:
 - meeting
-ai_summary: 'Notes from the Atlas kickoff meeting: attendees, the problem statement
-  operations brought, the agreed quarter goals and the decision to start with the
-  billing data source. Records the decision to defer streaming ingestion and lists
-  the open questions on data ownership. Links back to [[Overview]].'
-content_hash: c081c35c48659ae9119a9a89cf642716
+ai_summary: 'The kickoff meeting: the original Kopi Luwak observation that started
+  the company, the question the founders could not answer about why one animal should
+  hold the whole category, and the four decisions taken in the first hour.'
+content_hash: bc2e1731e6321b8242db377fbded690c
 linked_files:
-- Architecture/Decisions
-- Architecture/Data-Pipeline
-- Overview.md
-last_modified: '2026-10-13 18:40:00'
+- Market/Competitors.md
+- Animals/Civet.md
+- Animals/Capybara.md
+- Meetings/Decisions.md
+- Legal/Regulatory.md
+last_modified: '2026-10-13 22:12:22'
 ---
-# Kickoff — Atlas
+# Kickoff
 
-**Date:** week 1, Monday · **Duration:** 90 minutes
-**Attendees:** operations lead, two engineers, one analyst, engineering manager
+Three people, one kitchen table, one bag of Kopi Luwak someone had been given as a present
+and had not opened.
 
-## Problem statement (from operations)
+## The observation
 
-> "We have four versions of the monthly numbers and no way to tell which one is right."
+The bag cost 600 EUR per kilogram. The coffee inside it, once opened and brewed, was fine.
+Not remarkable. Flat, even.
 
-Operations walked through their current Monday routine: three exports, two
-spreadsheets, a lot of copy-paste. The recurring pain is not the effort, it is that
-nobody trusts the result.
+The question that followed was the company: **if the coffee is only fine, what exactly is
+the 600 EUR for?**
 
-## What we agreed
+## What we concluded
 
-- Start with **billing** as the first data source. It is the smallest, it is the one
-  finance already trusts, and it exercises the whole pipeline end to end.
-- Daily batch refresh. We explicitly decided against streaming for now — see
-  [[Architecture/Decisions]].
-- The analyst joins as a part-time member rather than a reviewer, so we get feedback
-  during the build instead of after it.
+The premium is paid for scarcity, the story, and the retelling. The animal is the vehicle,
+not the value. And if that is true, there is no reason one species should hold the whole
+category.
 
-## Open questions
+Nobody in the room could find the flaw in this. We have since found several, and they are
+all in [[Market/Competitors]].
 
-- Who owns the support data source? Nobody in the room could say.
-- Do we need row-level access control in M3, or can that wait?
-- What happens to the existing spreadsheets once Atlas is live — frozen or deleted?
+## Decisions taken in the first hour
 
-## Next steps
+1. Build a roster, not a product. One animal is a novelty; nine is a category.
+2. Never cage anything. Partly ethics, partly that caged production is what ruined
+   [[Animals/Civet]].
+3. Find one boring, reliable animal to pay for the interesting ones. This became
+   [[Animals/Capybara]].
+4. Write everything down, because at some point somebody official is going to ask.
 
-1. Engineer A: spike the billing extraction, report back in three days.
-2. Engineer B: write up the pipeline design → became [[Architecture/Data-Pipeline]].
-3. EM: find the owner of the support data source.
+Point 4 is why this vault exists. The formal versions are in [[Meetings/Decisions]].
 
-Scope and milestones are tracked in [[Overview]].
+## The thing nobody said out loud
+
+All three of us assumed one of the others had checked whether this was legal. None of us
+had. It took six weeks and it is now [[Legal/Regulatory]].
