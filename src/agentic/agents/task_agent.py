@@ -19,7 +19,7 @@ from datetime import datetime
 
 from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.llm_models import LLMModels
-from src.schemas.task_agent_schema import PlanStep, TaskAgentInput, TaskAgentOutput
+from src.schemas.task_agent_schema import TaskAgentInput, TaskAgentOutput
 from src.agentic.engine import run_agent_session
 from src.agentic.engine.jobs import (
     TaskJob,

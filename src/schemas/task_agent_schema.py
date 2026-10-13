@@ -1,8 +1,6 @@
 # src/schemas/task_agent_schema.py
 from pydantic import BaseModel, Field
 
-from src.schemas.tool_args import PlanStep, UpdatePlanArgs
-
 
 class TaskAgentInput(BaseModel):
     task_id: str = Field(description="Die eigene Task-ID – bei jedem update_plan-Aufruf als Referenz mitgeben.")
@@ -18,8 +16,6 @@ class TaskAgentOutput(BaseModel):
 
 
 __all__ = [
-    "PlanStep",
     "TaskAgentInput",
     "TaskAgentOutput",
-    "UpdatePlanArgs",
 ]

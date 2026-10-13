@@ -1,8 +1,6 @@
 # src/schemas/librarian_schema.py
 from pydantic import BaseModel, Field
 
-from src.schemas.tool_args import PathsArgs
-
 
 class LibrarianInput(BaseModel):
     question: str = Field(description="Die Frage, die anhand des Vault-Inhalts beantwortet werden soll.")
@@ -17,5 +15,4 @@ class LibrarianOutput(BaseModel):
 __all__ = [
     "LibrarianInput",
     "LibrarianOutput",
-    "PathsArgs",
 ]
