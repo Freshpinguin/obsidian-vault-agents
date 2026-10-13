@@ -29,7 +29,8 @@ export function addChatMessage(role, text) {
     bubble.innerHTML = renderMarkdown(text);
     // Wikilinks in Agenten-Antworten klickbar machen
     bubble.querySelectorAll(".wikilink").forEach(linkEl => {
-      linkEl.addEventListener("click", () => {
+      linkEl.addEventListener("click", (e) => {
+        e.preventDefault();
         const target = linkEl.getAttribute("data-wikilink");
         if (target) loadFileContent(target);
       });
@@ -136,7 +137,7 @@ export async function sendChatMessage(text) {
       state.sessionId = null;
       return;
     }
-    addChatMessage("error", err.detail || err.message || `Verbindungsfehler: ${err.message}`);
+    addChatMessage("error", err.detail || (err.status ? err.message : `Verbindungsfehler: ${err.message}`));
   } finally {
     state.isSending = false;
     sendBtnEl.disabled = false;

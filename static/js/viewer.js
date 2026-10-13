@@ -106,7 +106,8 @@ export async function loadFileContent(filePath) {
 
     // Klickbare Wikilinks im gerenderten Text verdrahten
     docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
-      linkEl.addEventListener("click", () => {
+      linkEl.addEventListener("click", (e) => {
+        e.preventDefault();
         const target = linkEl.getAttribute("data-wikilink");
         if (target) loadFileContent(target);
       });

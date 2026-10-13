@@ -65,7 +65,8 @@ if (btnModeRendered) {
     if (docBodyEditorEl) {
       docBodyRenderedEl.innerHTML = renderMarkdown(docBodyEditorEl.value);
       docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
-        linkEl.addEventListener("click", () => {
+        linkEl.addEventListener("click", (e) => {
+          e.preventDefault();
           const target = linkEl.getAttribute("data-wikilink");
           if (target) loadFileContent(target);
         });
@@ -116,7 +117,8 @@ export async function saveCurrentFile() {
       docDatesEl.textContent = `Zuletzt geändert: ${data.file.last_modified || "gerade eben"}`;
       docBodyRenderedEl.innerHTML = renderMarkdown(data.file.body || content);
       docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
-        linkEl.addEventListener("click", () => {
+        linkEl.addEventListener("click", (e) => {
+          e.preventDefault();
           const target = linkEl.getAttribute("data-wikilink");
           if (target) loadFileContent(target);
         });

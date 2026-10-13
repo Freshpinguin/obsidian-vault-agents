@@ -1,6 +1,6 @@
 import { closeDeleteModal } from "./editor.js";
 import { showToast } from "./toast.js";
-import { initFileWatcherEvents, stopFileWatcherEvents, fileEventSource } from "./live.js";
+import { initFileWatcherEvents, stopFileWatcherEvents } from "./live.js";
 
 // ==========================================
 // 10. Optionen & Einstellungen
