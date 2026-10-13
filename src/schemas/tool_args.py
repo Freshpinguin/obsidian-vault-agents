@@ -1,84 +1,84 @@
 # src/schemas/tool_args.py
-"""Pydantic-Modelle für alle Werkzeug-Aufruf-Argumente."""
+"""Pydantic models for all tool-call arguments."""
 from typing import Literal
 from pydantic import BaseModel, Field
 
 
 class PlanStep(BaseModel):
-    step: str = Field(description="Kurze Beschreibung dieses Arbeitsschritts.")
-    status: Literal["pending", "in_progress", "done"] = Field(description="Aktueller Status dieses Schritts.")
+    step: str = Field(description="Short description of this work step.")
+    status: Literal["pending", "in_progress", "done"] = Field(description="Current status of this step.")
 
 
 class AskLibrarianArgs(BaseModel):
-    question: str = Field(description="Die Recherche-Frage an den Librarian, der im Vault danach sucht.")
+    question: str = Field(description="The research question for the librarian, which searches the vault for it.")
 
 
 class CreateDirectoryArgs(BaseModel):
-    path: str = Field(description="Vault-Pfad des neu anzulegenden Ordners (inkl. evtl. fehlender Zwischenordner).")
+    path: str = Field(description="Vault path of the folder to create (including any missing parent folders).")
 
 
 class CreateFileArgs(BaseModel):
-    path: str = Field(description="Vault-Pfad der neu anzulegenden .md-Datei (muss noch nicht existieren).")
-    content: str = Field(description="Inhalt der neuen Datei (reiner Markdown-Text, ohne Frontmatter).")
+    path: str = Field(description="Vault path of the .md file to create (must not exist yet).")
+    content: str = Field(description="Content of the new file (plain Markdown text, without frontmatter).")
 
 
 class EditFileArgs(BaseModel):
-    path: str = Field(description="Vault-Pfad der zu bearbeitenden, bestehenden .md-Datei.")
-    content: str = Field(description="Der NEUE vollständige Inhalt der Datei (ersetzt den bisherigen Inhalt unterhalb des Frontmatters komplett).")
+    path: str = Field(description="Vault path of the existing .md file to edit.")
+    content: str = Field(description="The NEW complete content of the file (entirely replaces the existing content below the frontmatter).")
 
 
 class MoveFileArgs(BaseModel):
-    path: str = Field(description="Vault-Pfad der zu verschiebenden/umzubenennenden bestehenden Datei.")
-    new_path: str = Field(description="Neuer Vault-Pfad der Datei (muss noch nicht existieren, muss auf .md enden).")
+    path: str = Field(description="Vault path of the existing file to move/rename.")
+    new_path: str = Field(description="New vault path of the file (must not exist yet, must end in .md).")
 
 
 class DeleteFileArgs(BaseModel):
-    path: str = Field(description="Vault-Pfad der zu löschenden bestehenden .md-Datei.")
+    path: str = Field(description="Vault path of the existing .md file to delete.")
 
 
 class StartBackgroundTaskArgs(BaseModel):
     description: str = Field(
-        description="Vollständige, in sich verständliche Beschreibung der Aufgabe für den Task-Agenten "
-                     "(der Task-Agent kennt den bisherigen Chatverlauf nicht, also relevanten Kontext mit hineinfassen)."
+        description="Complete, self-contained description of the assignment for the task agent "
+                     "(the task agent does not know the conversation so far, so fold in the relevant context)."
     )
 
 
 class CheckTaskStatusArgs(BaseModel):
-    task_id: str = Field(description="Die task_id, die start_background_task zurückgegeben hat.")
+    task_id: str = Field(description="The task_id that start_background_task returned.")
 
 
 class PathsArgs(BaseModel):
     paths: list[str] = Field(
-        description="Liste von Vault-Pfaden (Ordner oder Dateien). Immer alle relevanten Pfade auf einmal übergeben, "
-                     "statt mehrere einzelne Aufrufe nacheinander zu machen."
+        description="List of vault paths (folders or files). Always pass all relevant paths at once "
+                     "instead of making several individual calls one after another."
     )
 
 
 class UpdatePlanArgs(BaseModel):
-    task_id: str = Field(description="Die eigene Task-ID.")
+    task_id: str = Field(description="Your own task ID.")
     steps: list[PlanStep] = Field(
-        description="Der VOLLSTÄNDIGE aktuelle Plan (alle Schritte, nicht nur neue/geänderte), in "
-                     "Abarbeitungsreihenfolge."
+        description="The COMPLETE current plan (all steps, not just new or changed ones), in "
+                     "execution order."
     )
 
 
 class WebSearchArgs(BaseModel):
     query: str = Field(
-        description="Die Frage oder das zu recherchierende Konzept, möglichst konkret und in sich "
-                     "verständlich formuliert (wird per echter Google-Websuche beantwortet)."
+        description="The question or the concept to research, phrased as concretely and "
+                     "self-containedly as possible (answered via a real Google web search)."
     )
 
 
 class ReasoningArgs(BaseModel):
     task: str = Field(
-        description="Die Aufgabe für den Denk-Agenten: eine komplexe Überlegung oder ein auszuformulierender "
-                     "Text, möglichst konkret und in sich verständlich formuliert (der Agent kennt den bisherigen "
-                     "Chatverlauf nicht, nur das, was hier steht)."
+        description="The task for the reasoning agent: a complex consideration or a text to draft, "
+                     "phrased as concretely and self-containedly as possible (the agent does not know the "
+                     "conversation so far, only what is written here)."
     )
     file_paths: list[str] = Field(
         default_factory=list,
-        description="Optionale Vault-Pfade, deren Inhalt als zusätzlicher Kontext mitgeschickt werden soll "
-                     "(z.B. bestehende Lore-Dateien, auf denen die Ausarbeitung aufbauen soll).",
+        description="Optional vault paths whose content should be sent along as additional context "
+                     "(e.g. existing notes the elaboration should build on).",
     )
 
 

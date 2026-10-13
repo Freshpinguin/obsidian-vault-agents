@@ -21,8 +21,8 @@ def _build_tree(
     dirs_map: dict[str, str],
     include_hidden: bool = False,
 ) -> tuple[list[FileNode], int, int]:
-    """Baut rekursiv die Baumstruktur für ein Verzeichnis auf.
-    Gibt (items, file_count, dir_count) zurück."""
+    """Recursively builds the tree structure for a directory.
+    Returns (items, file_count, dir_count)."""
     dir_nodes: list[FileNode] = []
     file_nodes: list[FileNode] = []
     total_files = 0
@@ -35,7 +35,7 @@ def _build_tree(
 
     for entry in entries:
         name = entry.name
-        # Ignoriere Git und standardmäßig versteckte Dateien/Ordner
+        # Ignore git and, by default, hidden files/folders
         if name == ".git":
             continue
         if not include_hidden and name.startswith("."):
@@ -65,7 +65,7 @@ def _build_tree(
                 )
             )
         elif entry.is_file():
-            # Nur Markdown oder generell alle Dateien? Markdown primär, andere auch falls vorhanden
+            # Markdown is the primary case; other files are included if present
             stat = entry.stat()
             last_mod = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -96,8 +96,8 @@ def _build_tree(
 
 
 @router.get("", response_model=FileTreeResponse)
-def get_files(include_hidden: bool = Query(False, description="Versteckte Dateien/Ordner (.index.md etc.) anzeigen")):
-    """Gibt die vollständige hierarchische Ordner- und Dateistruktur des Vaults zurück."""
+def get_files(include_hidden: bool = Query(False, description="Show hidden files/folders (.index.md etc.)")):
+    """Returns the complete hierarchical folder and file structure of the vault."""
     root = VAULT_ROOT.resolve()
     ai_map = load_ai_map(root)
     files_map = ai_map.get("files", {})

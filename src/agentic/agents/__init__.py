@@ -1,13 +1,13 @@
-"""Agent-Definitionen für das Obsidian-Vault-System.
+"""Agent definitions for the Obsidian vault system.
 
-Fünf Agenten laufen über die Engine (multiturn, strukturierte Antwort, Werkzeuge):
+Five agents run through the engine (multi-turn, structured response, tools):
 - ChatAgent
 - TaskAgent
 - LibrarianAgent
 - SummarizerAgent
 - FolderSummarizerAgent
 
-Zwei sind einmalige SDK-Aufrufe ohne Session:
+Two are one-shot SDK calls without a session:
 - reasoner
 - web_search
 """

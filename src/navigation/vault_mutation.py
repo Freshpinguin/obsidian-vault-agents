@@ -1,18 +1,18 @@
 # src/navigation/vault_mutation.py
-"""Schreibende Gegenstücke zu vault_navigation.py: Ordner/Dateien anlegen, Dateien
-bearbeiten und verschieben. Nutzt dieselbe tolerante Pfad-Auflösung (siehe
-vault_navigation._resolve) für bereits existierende Ziele (edit_file, move_file-Quelle).
-Für NEUE Pfade (create_directory, create_file, move_file-Ziel) gibt es keine Fuzzy-Suche
-(nichts zum Abgleichen vorhanden) – dort wird nur normalisiert und gegen ein Verlassen
-des Vaults abgesichert (siehe _resolve_new_path).
+"""Writing counterparts to vault_navigation.py: create folders and files, edit and
+move files. Uses the same tolerant path resolution (see vault_navigation._resolve)
+for targets that already exist (edit_file, move_file source). For NEW paths
+(create_directory, create_file, move_file destination) there is no fuzzy lookup
+(nothing to match against) - those are only normalized and guarded against escaping
+the vault (see _resolve_new_path).
 
-Schreibt ein Aufruf hier tatsächlich eine Datei im Vault, greift automatisch der bereits
-laufende Watchdog (siehe main.py): Er erkennt die Änderung und stößt die normale
-Zusammenfassungs-Pipeline an (Summarizer-Agent, .ai_map.json, .index.md-Kaskade).
+When a call here actually writes a file, the already-running watchdog picks it up
+automatically (see main.py): it detects the change and triggers the normal
+summarization pipeline (summarizer agent, .ai_map.json, .index.md cascade).
 
-Ausnahme: create_file trägt die neue Datei zusätzlich sofort selbst in die .ai_map.json
-ein (register_pending_file), weil der Summarizer um 30 Minuten verzögert läuft und die
-Notiz für die Agenten bis dahin sonst unsichtbar wäre.
+Exception: create_file additionally registers the new file in .ai_map.json straight
+away (register_pending_file), because the summarizer runs on a 30-minute delay and
+the note would otherwise be invisible to the agents until then.
 """
 import unicodedata
 from pathlib import Path
@@ -39,10 +39,10 @@ from src.navigation.vault_navigation import (
 
 
 def _resolve_new_path(path: str | Path, vault_root: Path | None = None) -> Path:
-    """Löst einen NEUEN (noch nicht existierenden) Vault-Pfad auf: normalisiert
-    Schreibweise (Unicode, Slash-Richtung, führende Slashes, vorangestellte
-    Root-Bezeichner wie "data/") OHNE Fuzzy-Suche – für neue Pfade gibt es nichts zum
-    Abgleichen. Lehnt Pfade ab, die aus dem Vault herausführen würden."""
+    """Resolves a NEW (not yet existing) vault path: normalizes spelling (Unicode,
+    slash direction, leading slashes, leading root identifiers such as "data/")
+    WITHOUT fuzzy lookup - for new paths there is nothing to match against. Rejects
+    paths that would lead outside the vault."""
     root = _vault_root(vault_root).resolve()
     raw = unicodedata.normalize("NFC", str(path)).replace("\\", "/").strip()
     segments = [s for s in raw.strip("/").split("/") if s not in ("", ".")]
@@ -51,76 +51,76 @@ def _resolve_new_path(path: str | Path, vault_root: Path | None = None) -> Path:
         segments = segments[1:]
 
     if not segments:
-        raise VaultPathError("Es wurde kein Pfad angegeben.")
+        raise VaultPathError("No path was provided.")
 
     resolved = root.joinpath(*segments).resolve()
     if resolved != root and root not in resolved.parents:
-        raise VaultPathError(f"Pfad liegt außerhalb des Vaults: {path}")
+        raise VaultPathError(f"Path lies outside the vault: {path}")
     return resolved
 
 
 def create_directory(path: str, vault_root: Path | None = None) -> str:
-    """Legt einen neuen (leeren) Ordner im Vault an, inkl. fehlender Zwischenordner."""
+    """Creates a new (empty) folder in the vault, including any missing parent folders."""
     root = _vault_root(vault_root)
     try:
         target = _resolve_new_path(path, root)
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if target.exists():
-        kind = "Ordner" if target.is_dir() else "Datei"
-        return f"Fehler: '{_vault_path(target, root)}' existiert bereits ({kind})."
+        kind = "folder" if target.is_dir() else "file"
+        return f"Error: '{_vault_path(target, root)}' already exists ({kind})."
 
     target.mkdir(parents=True)
     register_pending_directory(target, root)
-    logger.info(f"[Mutation] Ordner erstellt: {_vault_path(target, root)}")
-    return f"Ordner '{_vault_path(target, root)}' wurde erstellt."
+    logger.info(f"[Mutation] Folder created: {_vault_path(target, root)}")
+    return f"Folder '{_vault_path(target, root)}' was created."
 
 
 def create_file(path: str, content: str, vault_root: Path | None = None) -> str:
-    """Legt eine neue Markdown-Datei mit dem gegebenen Inhalt an (ohne Frontmatter –
-    das ergänzt die Zusammenfassungs-Pipeline automatisch). Fehlende Zwischenordner
-    werden dabei mit angelegt."""
+    """Creates a new Markdown file with the given content (without frontmatter - the
+    summarization pipeline adds that automatically). Missing parent folders are
+    created along the way."""
     root = _vault_root(vault_root)
     try:
         target = _resolve_new_path(path, root)
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if target.suffix != ".md":
-        return f"Fehler: Nur .md-Dateien werden unterstützt ('{path}')."
+        return f"Error: only .md files are supported ('{path}')."
     if not is_summarizable_path(target):
-        return f"Fehler: '{_vault_path(target, root)}' ist kein gültiger Dateiname für eine Notiz."
+        return f"Error: '{_vault_path(target, root)}' is not a valid file name for a note."
     if target.exists():
-        return f"Fehler: '{_vault_path(target, root)}' existiert bereits."
+        return f"Error: '{_vault_path(target, root)}' already exists."
 
     target.parent.mkdir(parents=True, exist_ok=True)
-    # Defensiv: falls versehentlich ein YAML-Frontmatter im übergebenen Inhalt steckt
-    # (z.B. weil ein Agent den Inhalt einer anderen Datei als Vorlage kopiert hat),
-    # wird es entfernt statt in der neuen Datei zu landen.
+    # Defensive: if the supplied content accidentally contains YAML frontmatter (e.g.
+    # because an agent copied another file's content as a template), strip it instead
+    # of letting it end up in the new file.
     target.write_text(_strip_frontmatter(content) + "\n", encoding="utf-8")
     register_pending_file(target, root)
-    logger.info(f"[Mutation] Datei erstellt: {_vault_path(target, root)}")
-    return f"Datei '{_vault_path(target, root)}' wurde erstellt."
+    logger.info(f"[Mutation] File created: {_vault_path(target, root)}")
+    return f"File '{_vault_path(target, root)}' was created."
 
 
 def edit_file(path: str, content: str, vault_root: Path | None = None) -> str:
-    """Ersetzt den Inhalt einer bestehenden Datei (unterhalb des YAML-Frontmatters, das
-    unverändert erhalten bleibt – die Zusammenfassungs-Pipeline aktualisiert es beim
-    nächsten Durchlauf ohnehin). Der Pfad muss nicht exakt stimmen (siehe _resolve)."""
+    """Replaces the content of an existing file (below the YAML frontmatter, which is
+    preserved unchanged - the summarization pipeline updates it on the next run
+    anyway). The path does not have to match exactly (see _resolve)."""
     root = _vault_root(vault_root)
     try:
         target = _resolve(path, root, expect="file")
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if not is_summarizable_path(target):
-        return f"Fehler: '{_vault_path(target, root)}' ist eine Systemdatei und kann nicht bearbeitet werden."
+        return f"Error: '{_vault_path(target, root)}' is a system file and cannot be edited."
 
     fm, _ = _read_md(target)
-    # Defensiv: content kann selbst ein (ggf. veraltetes) Frontmatter enthalten, wenn der
-    # Aufrufer z.B. den kompletten alten Dateiinhalt als Vorlage genommen hat - das würde
-    # sonst VOR das frisch gelesene, aktuelle Frontmatter geschrieben und sich verdoppeln.
+    # Defensive: content may itself contain (possibly stale) frontmatter, e.g. if the
+    # caller used the complete old file content as a template - that would otherwise be
+    # written BEFORE the freshly read, current frontmatter and end up duplicated.
     body = _strip_frontmatter(content)
     if fm:
         fm_yaml = yaml.dump(fm, allow_unicode=True, default_flow_style=False, sort_keys=False)
@@ -129,31 +129,31 @@ def edit_file(path: str, content: str, vault_root: Path | None = None) -> str:
         new_text = body + "\n"
 
     target.write_text(new_text, encoding="utf-8")
-    logger.info(f"[Mutation] Datei bearbeitet: {_vault_path(target, root)}")
-    return f"Datei '{_vault_path(target, root)}' wurde aktualisiert."
+    logger.info(f"[Mutation] File edited: {_vault_path(target, root)}")
+    return f"File '{_vault_path(target, root)}' was updated."
 
 
 def move_file(path: str, new_path: str, vault_root: Path | None = None) -> str:
-    """Verschiebt/benennt eine bestehende Datei um. Die Quelle wird tolerant aufgelöst
-    (siehe _resolve), das Ziel muss ein neuer, noch nicht existierender .md-Pfad sein."""
+    """Moves/renames an existing file. The source is resolved tolerantly (see
+    _resolve); the destination must be a new, not yet existing .md path."""
     root = _vault_root(vault_root)
     try:
         source = _resolve(path, root, expect="file")
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if not is_summarizable_path(source):
-        return f"Fehler: '{_vault_path(source, root)}' ist eine Systemdatei und kann nicht verschoben werden."
+        return f"Error: '{_vault_path(source, root)}' is a system file and cannot be moved."
 
     try:
         destination = _resolve_new_path(new_path, root)
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if destination.suffix != ".md":
-        return f"Fehler: Ziel muss auf .md enden ('{new_path}')."
+        return f"Error: destination must end in .md ('{new_path}')."
     if destination.exists():
-        return f"Fehler: '{_vault_path(destination, root)}' existiert bereits."
+        return f"Error: '{_vault_path(destination, root)}' already exists."
 
     source_label = _vault_path(source, root)
     dest_label = _vault_path(destination, root)
@@ -161,26 +161,26 @@ def move_file(path: str, new_path: str, vault_root: Path | None = None) -> str:
     destination.parent.mkdir(parents=True, exist_ok=True)
     source.rename(destination)
     move_map_entry(source, destination, root)
-    logger.info(f"[Mutation] Datei verschoben: {source_label} -> {dest_label}")
-    return f"Datei verschoben: '{source_label}' -> '{dest_label}'."
+    logger.info(f"[Mutation] File moved: {source_label} -> {dest_label}")
+    return f"File moved: '{source_label}' -> '{dest_label}'."
 
 
 def delete_file(path: str, vault_root: Path | None = None) -> str:
-    """Löscht eine bestehende .md-Datei im Vault."""
+    """Deletes an existing .md file from the vault."""
     root = _vault_root(vault_root)
     try:
         target = _resolve(path, root, expect="file")
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if not is_summarizable_path(target):
-        return f"Fehler: '{_vault_path(target, root)}' ist eine Systemdatei und kann nicht gelöscht werden."
+        return f"Error: '{_vault_path(target, root)}' is a system file and cannot be deleted."
 
     label = _vault_path(target, root)
     try:
         target.unlink()
         remove_map_entry(target, root)
-        logger.info(f"[Mutation] Datei gelöscht: {label}")
-        return f"Datei '{label}' wurde gelöscht."
+        logger.info(f"[Mutation] File deleted: {label}")
+        return f"File '{label}' was deleted."
     except Exception as e:
-        return f"Fehler beim Löschen von '{label}': {e}"
+        return f"Error deleting '{label}': {e}"

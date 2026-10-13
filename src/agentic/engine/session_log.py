@@ -15,27 +15,27 @@ MAX_SESSION_LOGS = 100
 
 
 def _cleanup_old_session_logs():
-    """Behält nur die letzten MAX_SESSION_LOGS Session-Logdateien."""
+    """Keeps only the most recent MAX_SESSION_LOGS session log files."""
     files = sorted(glob.glob(os.path.join(LLM_DIR, "*.md")), key=os.path.getmtime)
     while len(files) > MAX_SESSION_LOGS:
         oldest_file = files.pop(0)
         try:
             os.remove(oldest_file)
         except Exception as e:
-            logger.error(f"Konnte altes Session-Log {oldest_file} nicht löschen: {e}")
+            logger.error(f"Could not delete old session log {oldest_file}: {e}")
 
 
 class SessionLogger:
-    """Sammelt den gesamten Verlauf einer AgentSession (jeder LLM-Turn, jeder
-    Tool-Aufruf) in einer einzigen Markdown-Logdatei, statt wie zuvor pro LLM-Call
-    eine eigene Datei zu erzeugen. Die Datei wird bei Session-Start angelegt und bei
-    jedem Turn per Append fortgeschrieben, damit auch bei einem Absturz mitten in
-    einer langen ReAct-Schleife bereits alles bis dahin auf der Platte steht.
+    """Collects the entire history of an AgentSession (every LLM turn, every tool
+    call) in a single Markdown log file, instead of creating one file per LLM call as
+    it used to. The file is created when the session starts and appended to on every
+    turn, so that even if the process crashes in the middle of a long ReAct loop,
+    everything up to that point is already on disk.
 
-    Für Chat-Agenten, bei denen dieselbe Session über mehrere Nutzer-Nachrichten
-    hinweg weiterlebt, wird über 'existing_path' an dieselbe Datei angeknüpft statt
-    bei jeder neuen Nachricht eine weitere Datei anzulegen – eine Session bleibt so
-    IMMER genau eine Logdatei, unabhängig davon, wie viele Turns sie hat.
+    For chat agents, where the same session lives on across several user messages,
+    'existing_path' attaches to the same file instead of creating another one per
+    message - a session therefore ALWAYS stays exactly one log file, regardless of how
+    many turns it has.
     """
 
     def __init__(self, agent_name: str, session_id: str, existing_path: str | None = None):
@@ -48,27 +48,27 @@ class SessionLogger:
 
         with open(self.filepath, "w", encoding="utf-8") as f:
             f.write(f"# Agent Session: {agent_name} ({session_id})\n\n")
-            f.write(f"**Gestartet:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n---\n\n")
+            f.write(f"**Started:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n---\n\n")
 
         _cleanup_old_session_logs()
 
     def log_step(self, step: int, call: "LLMCall", messages: list[dict], model: str, raw_response: str, tokens_in: int, tokens_out: int):
-        """Protokolliert einen LLM-Turn: den vollständigen zu diesem Zeitpunkt gesendeten
-        Kontext (aus der Session zusammengesetzt), die rohe Modellantwort sowie ggf.
-        ausgeführte Tool-Aufrufe mit ihrem Ergebnis. 'step' zählt fortlaufend über die
-        gesamte Session (nicht nur den aktuellen Turn), damit die Nummerierung auch bei
-        Chat-Sessions mit mehreren Nachrichten eindeutig bleibt."""
+        """Logs one LLM turn: the complete context sent at that point (assembled from
+        the session), the raw model response and any executed tool calls with their
+        results. 'step' counts continuously across the whole session (not just the
+        current turn), so the numbering stays unambiguous for chat sessions with
+        several messages."""
         prompt_text = "\n\n".join(
             f"[{m['role'].upper()}]\n{m.get('content') or ''}" for m in messages
         )
 
         with open(self.filepath, "a", encoding="utf-8") as f:
-            f.write(f"## Schritt {step} — {model} — {call.status.upper()}\n\n")
+            f.write(f"## Step {step} — {model} — {call.status.upper()}\n\n")
             f.write(f"**Tokens In:** {tokens_in} | **Tokens Out:** {tokens_out}\n\n")
-            f.write(f"### Kontext (kompletter Verlauf bis zu diesem Turn)\n\n{prompt_text}\n\n")
-            f.write(f"### Rohe Antwort\n\n{raw_response}\n\n")
+            f.write(f"### Context (complete history up to this turn)\n\n{prompt_text}\n\n")
+            f.write(f"### Raw response\n\n{raw_response}\n\n")
             if call.tool_calls:
-                f.write("### Tool-Aufrufe\n\n")
+                f.write("### Tool calls\n\n")
                 for tc in call.tool_calls:
                     f.write(f"- **{tc.tool_name}**(`{tc.arguments}`)\n\n  → {tc.result}\n\n")
             f.write("---\n\n")
@@ -78,24 +78,24 @@ class SessionLogger:
             f"[{m['role'].upper()}]\n{m.get('content') or ''}" for m in messages
         )
         with open(self.filepath, "a", encoding="utf-8") as f:
-            f.write(f"## Schritt {step} — {model} — API FEHLER\n\n")
-            f.write(f"### Kontext (kompletter Verlauf bis zu diesem Turn)\n\n{prompt_text}\n\n")
-            f.write(f"### Fehler\n\n{error}\n\n---\n\n")
+            f.write(f"## Step {step} — {model} — API ERROR\n\n")
+            f.write(f"### Context (complete history up to this turn)\n\n{prompt_text}\n\n")
+            f.write(f"### Error\n\n{error}\n\n---\n\n")
 
     def log_compaction(self, step: int, before_chars: int, after_chars: int, compacted_count: int, summary: str):
-        """Protokolliert eine Kontext-Verdichtung (siehe context_compactor.py) – wichtig
-        für die Nachvollziehbarkeit, da der Kontext, den das Modell ab hier tatsächlich
-        sieht, sich vom vorherigen Schritt unterscheidet."""
+        """Logs a context compaction (see compaction.py) - important for traceability,
+        since the context the model actually sees from here on differs from the
+        previous step."""
         with open(self.filepath, "a", encoding="utf-8") as f:
-            f.write(f"## Kontext-Verdichtung vor Schritt {step}\n\n")
-            f.write(f"{compacted_count} Nachrichten verdichtet: {before_chars} -> {after_chars} Zeichen.\n\n")
-            f.write(f"### Zusammenfassung\n\n{summary}\n\n---\n\n")
+            f.write(f"## Context compaction before step {step}\n\n")
+            f.write(f"Compacted {compacted_count} messages: {before_chars} -> {after_chars} chars.\n\n")
+            f.write(f"### Summary\n\n{summary}\n\n---\n\n")
 
     def log_turn_end(self, session: "AgentSession"):
-        """Schreibt eine Zwischenbilanz ans Ende der Logdatei – bei Ein-Schritt-Agenten
-        der endgültige Abschluss, bei Chat-Agenten der Stand nach dem aktuellen Turn
-        (die Datei läuft danach beim nächsten Turn einfach weiter)."""
+        """Writes an interim summary to the end of the log file - for one-shot agents
+        the final conclusion, for chat agents the state after the current turn (the
+        file simply continues on the next turn)."""
         with open(self.filepath, "a", encoding="utf-8") as f:
-            f.write("## Ergebnis (bisheriger Stand)\n\n")
-            f.write("✅ Letzter Turn erfolgreich\n" if session.is_successful else "❌ Letzter Turn fehlgeschlagen\n")
+            f.write("## Result (state so far)\n\n")
+            f.write("✅ Last turn succeeded\n" if session.is_successful else "❌ Last turn failed\n")
             f.write(f"\nTurns gesamt: {len(session.history)} | davon Tool-Aufrufe: {session.tool_steps}\n\n---\n\n")

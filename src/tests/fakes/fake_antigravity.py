@@ -1,6 +1,6 @@
-"""Attrappe für ``google.antigravity.Agent``, den ``src.agentic.agents.reasoner`` nutzt.
+"""Fake for ``google.antigravity.Agent`` used by ``src.agentic.agents.reasoner``.
 
-Der echte Aufruf ist::
+The real call is::
 
     async with Agent(config) as agent:
         response = await agent.chat(prompt)

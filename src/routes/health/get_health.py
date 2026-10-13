@@ -4,7 +4,7 @@ from src.routes.health import router
 
 @router.get("/health")
 def get_health():
-    return {"status": "Obsidian Vault Agents läuft."}
+    return {"status": "Obsidian Vault Agents is running."}
 
 
 # Alias

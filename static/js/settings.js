@@ -34,28 +34,28 @@ export function saveSettings() {
 }
 
 export function applySettings() {
-  // 1. Gesamter Metadaten-Block
+  // 1. The whole metadata block
   if (currentSettings.showMetadataBox) {
     document.body.classList.remove("hide-file-metadata");
   } else {
     document.body.classList.add("hide-file-metadata");
   }
 
-  // 2. KI-Zusammenfassung Box
+  // 2. AI summary box
   if (currentSettings.showAiSummary) {
     document.body.classList.remove("hide-ai-summary");
   } else {
     document.body.classList.add("hide-ai-summary");
   }
 
-  // 3. Verknüpfte Notizen Box
+  // 3. Linked-notes box
   if (currentSettings.showWikilinks) {
     document.body.classList.remove("hide-wikilinks");
   } else {
     document.body.classList.add("hide-wikilinks");
   }
 
-  // 4. Lesegröße
+  // 4. Text size
   document.body.classList.remove("font-compact", "font-large");
   if (currentSettings.fontSize === "compact") {
     document.body.classList.add("font-compact");
@@ -63,7 +63,7 @@ export function applySettings() {
     document.body.classList.add("font-large");
   }
 
-  // Inputs im Modal synchronisieren
+  // Keep the inputs in the modal in sync
   const cbMeta = document.getElementById("setting-show-metadata");
   if (cbMeta) cbMeta.checked = currentSettings.showMetadataBox;
 
@@ -92,7 +92,7 @@ export function closeSettingsModal() {
   if (modal) modal.classList.remove("open");
 }
 
-// Event Listeners für Optionen
+// Event listeners for the options
 const btnOpenSettings = document.getElementById("btn-open-settings");
 const btnExplorerSettings = document.getElementById("btn-explorer-settings");
 const btnFloatingSettings = document.getElementById("btn-floating-settings");
@@ -105,7 +105,7 @@ if (btnFloatingSettings) btnFloatingSettings.addEventListener("click", openSetti
 if (btnCloseSettings) btnCloseSettings.addEventListener("click", closeSettingsModal);
 if (btnSaveSettingsClose) btnSaveSettingsClose.addEventListener("click", closeSettingsModal);
 
-// Globale Klick-Delegation für Schließen-Buttons und Backdrop
+// Global click delegation for close buttons and the backdrop
 document.addEventListener("click", (e) => {
   if (e.target.closest("#btn-close-settings") || e.target.closest("#btn-save-settings-close")) {
     closeSettingsModal();

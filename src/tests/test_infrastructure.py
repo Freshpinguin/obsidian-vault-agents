@@ -59,7 +59,7 @@ def test_fake_llm_scripted_exception(fake_llm: FakeLLM):
 def test_fake_llm_reports_unconsumed_responses():
     fake = FakeLLM()
     fake.script("Chat", final({"reply": "leftover"}))
-    with pytest.raises(AssertionError, match="Nicht verbrauchte Skript-Antworten"):
+    with pytest.raises(AssertionError, match="Unconsumed scripted responses"):
         fake.assert_clean()
 
 

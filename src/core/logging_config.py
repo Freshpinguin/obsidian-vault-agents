@@ -2,15 +2,15 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 
-# Basis-Ordner für Logs definieren
+# Base directory for logs
 LOG_DIR = os.getenv("LOG_DIR", "logs")
 LLM_DIR = os.path.join(LOG_DIR, "llm_details")
 
-# Ordner erstellen, falls sie nicht existieren
+# Create the directories if they do not exist
 os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(LLM_DIR, exist_ok=True)
 
-# Wie viele Session-Logdateien maximal aufbewahrt werden
+# How many session log files to keep at most
 MAX_SESSION_LOGS = 100
 
 # ==========================================
@@ -19,7 +19,7 @@ MAX_SESSION_LOGS = 100
 logger = logging.getLogger("scifi_engine")
 logger.setLevel(logging.INFO)
 
-# Verhindern, dass Logs doppelt ausgegeben werden
+# Prevent log records from being emitted twice
 if not logger.handlers:
     # Konsolen-Ausgabe (optional, aber hilfreich beim Entwickeln)
     console_handler = logging.StreamHandler()
@@ -27,7 +27,7 @@ if not logger.handlers:
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    # Datei-Ausgabe (Rolling: max 5MB pro Datei, max 5 Backups)
+    # File output (rolling: max 5MB per file, max 5 backups)
     file_handler = RotatingFileHandler(
         os.path.join(LOG_DIR, "engine.log"),
         maxBytes=5 * 1024 * 1024,  # 5 MB

@@ -19,7 +19,7 @@ from src.schemas.file_schema import UpdateFileRequest, UpdateFileResponse
 
 @router.put("/content", response_model=UpdateFileResponse)
 def put_file_content(body: UpdateFileRequest):
-    """Speichert den bearbeiteten Inhalt einer Datei im Vault."""
+    """Saves the edited content of a file in the vault."""
     root = _vault_root().resolve()
 
 
@@ -29,12 +29,12 @@ def put_file_content(body: UpdateFileRequest):
         raise HTTPException(status_code=404, detail=str(e))
 
     if not resolved.is_file():
-        raise HTTPException(status_code=400, detail=f"'{body.path}' ist keine Datei.")
+        raise HTTPException(status_code=400, detail=f"'{body.path}' is not a file.")
 
     if not is_summarizable_path(resolved):
         raise HTTPException(
             status_code=400,
-            detail=f"Datei '{resolved.name}' ist eine Systemdatei und kann nicht bearbeitet werden.",
+            detail=f"File '{resolved.name}' is a system file and cannot be edited.",
         )
 
     # Bestehendes Frontmatter lesen
@@ -44,20 +44,20 @@ def put_file_content(body: UpdateFileRequest):
     match = FRONTMATTER_PATTERN.match(content)
 
     if match:
-        # Benutzer hat Text mit Frontmatter-Header editiert
+        # The user edited text that includes a frontmatter header
         try:
             user_fm = yaml.safe_load(match.group(1)) or {}
-            # Falls ai_summary im alten fm war, aber im user_fm nicht vorkommt, beibehalten
+            # If ai_summary was in the old frontmatter but is absent from user_fm, keep it
             if "ai_summary" not in user_fm and existing_fm.get("ai_summary"):
                 user_fm["ai_summary"] = existing_fm["ai_summary"]
             parsed_body = match.group(2).strip()
             fm_yaml = yaml.dump(user_fm, allow_unicode=True, default_flow_style=False, sort_keys=False)
             new_text = f"---\n{fm_yaml}---\n{parsed_body}\n"
         except yaml.YAMLError:
-            # Falls YAML fehlerhaft formatiert ist, schreiben wir den Inhalt direkt
+            # If the YAML is malformed, write the content directly
             new_text = content.rstrip() + "\n"
     else:
-        # Benutzer hat nur den Body (ohne Frontmatter) editiert
+        # The user edited only the body (without frontmatter)
         body_text = content.strip()
         if existing_fm:
             fm_yaml = yaml.dump(existing_fm, allow_unicode=True, default_flow_style=False, sort_keys=False)
@@ -68,15 +68,15 @@ def put_file_content(body: UpdateFileRequest):
     try:
         resolved.write_text(new_text, encoding="utf-8")
         rel_path = _vault_path(resolved, root)
-        logger.info(f"[Mutation] Datei manuell im Frontend bearbeitet: {rel_path}")
+        logger.info(f"[Mutation] File edited manually in the frontend: {rel_path}")
         updated_file = _load_file_response(rel_path)
 
         return UpdateFileResponse(
             path=rel_path,
             success=True,
-            message=f"Datei '{resolved.name}' wurde erfolgreich gespeichert.",
+            message=f"File '{resolved.name}' was saved successfully.",
             file=updated_file,
         )
     except Exception as e:
-        logger.error(f"[Mutation] Fehler beim Speichern von {resolved}: {e}")
-        raise HTTPException(status_code=500, detail=f"Fehler beim Speichern: {str(e)}")
+        logger.error(f"[Mutation] Error saving {resolved}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error while saving: {str(e)}")

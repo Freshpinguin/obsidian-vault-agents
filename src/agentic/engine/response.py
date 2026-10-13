@@ -1,11 +1,11 @@
 # src/agentic/engine/response.py
-"""Hilfsfunktionen für die Verarbeitung und Bereinigung von LLM-Antworten."""
+"""Helpers for processing and cleaning up LLM responses."""
 
 
 def strip_json_fence(text: str) -> str:
-    """Entfernt eine umschließende Markdown-Codeblock-Klammer (```json ... ```),
-    falls das Modell trotz Anweisung eine liefert. Nur relevant, wenn kein
-    response_format erzwungen wird (also im Tool-Calling-Fall), ansonsten ein No-Op."""
+    """Removes a surrounding Markdown code fence (```json ... ```) if the model
+    emits one despite instructions. Only relevant when no response_format is
+    enforced (i.e. in the tool-calling case), otherwise a no-op."""
     text = text.strip()
     if not text.startswith("```"):
         return text

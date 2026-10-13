@@ -1,44 +1,50 @@
 # src/agentic/engine/guards.py
-"""Schutzmechanismen und Halluzinations-Erkennung für die Agent-ReAct-Schleife."""
+"""Safety checks and hallucination detection for the agent ReAct loop."""
 from typing import Any
 from src.schemas.status import AgentStatus
 from src.schemas.tool_schema import MUTATION_TOOL_NAMES
 
+# Phrases that indicate the model is claiming (or announcing) a vault mutation.
+# These are matched against the reply text, so they must stay in the same
+# language the agents are prompted to answer in.
 MUTATION_INDICATORS = [
-    "angelegt", "erstellt", "gespeichert", "bearbeitet", "verschoben", "gelöscht",
-    "lege dir", "erstelle dir", "lege die datei", "erstelle die datei",
-    "ich erstelle", "ich lege", "lösche die datei", "habe gelöscht",
+    "created", "saved", "edited", "updated", "moved", "renamed", "deleted", "removed",
+    "i'll create", "i will create", "i'll add", "i will add", "i'll save", "i will save",
+    "i'm creating", "i am creating", "i'll delete", "i will delete", "i'll move",
+    "i will move", "let me create", "has been written", "i've written",
 ]
 
+# Negated or failed mutations must not count as a hallucinated claim.
 NEGATIONS = [
-    "nicht angelegt", "keine datei", "konnte nicht", "nicht möglich",
-    "nicht gefunden", "wurde nicht", "nicht gelöscht",
+    "not created", "no file", "could not", "couldn't", "was unable", "wasn't able",
+    "not possible", "not found", "does not exist", "doesn't exist", "not deleted",
+    "not saved", "failed to",
 ]
 
 SKIPPED_REQUIRED_TOOL_ERROR = (
-    "Deine Antwort wurde abgelehnt: Du musst für diese Aufgabe mindestens einmal ein Werkzeug "
-    "aufrufen (z.B. update_plan), bevor du eine finale Antwort gibst. Rufe jetzt zuerst das "
-    "passende Werkzeug auf, statt direkt zu antworten."
+    "Your response was rejected: for this task you must call at least one tool "
+    "(e.g. update_plan) before giving a final answer. Call the appropriate tool now "
+    "instead of answering directly."
 )
 
 HALLUCINATED_MUTATION_ERROR = (
-    "Deine Antwort wurde abgelehnt: Du hast im Antworttext behauptet oder angekündigt, eine Datei bzw. einen Ordner "
-    "anzulegen oder zu verändern, hast aber KEIN entsprechendes Werkzeug (z.B. create_file, edit_file) "
-    "als Tool-Call ausgeführt! Es wurde daher nichts im Vault gespeichert. "
-    "Rufe JETZT im nächsten Schritt ZUERST das passende Werkzeug (z.B. create_file) per Function-Call auf!"
+    "Your response was rejected: in your reply text you claimed or announced that you would "
+    "create or modify a file or folder, but you did NOT execute a corresponding tool "
+    "(e.g. create_file, edit_file) as a tool call. Nothing was written to the vault. "
+    "In your next step, call the appropriate tool (e.g. create_file) as a function call FIRST."
 )
 
 
 def check_skipped_required_tool(agent: Any, tool_steps: int) -> bool:
-    """Modell hat den geforderten 'erst mindestens ein Tool nutzen'-Schritt übersprungen
-    und direkt eine (evtl. komplett halluzinierte) finale Antwort geliefert - trotz
-    gültigem JSON NICHT als Erfolg werten, sondern wie einen Parse-Fehler behandeln."""
+    """The model skipped the required 'use at least one tool first' step and jumped
+    straight to a (possibly entirely hallucinated) final answer. Despite being valid
+    JSON this must not count as success; treat it like a parse error instead."""
     return bool(getattr(agent, "require_tool_call_first_round", False) and tool_steps == 0)
 
 
 def check_hallucinated_mutation(agent: Any, parse_result: Any, tool_steps: int) -> bool:
-    """Prüft, ob der Agent eine Dateimodifikation im Text behauptet/angekündigt hat,
-    ohne je ein entsprechendes Werkzeug (z.B. create_file, edit_file) aufgerufen zu haben."""
+    """Checks whether the agent claimed or announced a file modification in its text
+    without ever having called a corresponding tool (e.g. create_file, edit_file)."""
     if tool_steps != 0:
         return False
 
@@ -59,7 +65,8 @@ def check_hallucinated_mutation(agent: Any, parse_result: Any, tool_steps: int) 
         reply_text = str(parsed_data.get("reply", "")).lower()
 
     if any(ind in reply_text for ind in MUTATION_INDICATORS) and (
-        ".md" in reply_text or "datei" in reply_text or "ordner" in reply_text
+        ".md" in reply_text or "file" in reply_text or "folder" in reply_text
+        or "note" in reply_text or "directory" in reply_text
     ):
         if not any(neg in reply_text for neg in NEGATIONS):
             return True

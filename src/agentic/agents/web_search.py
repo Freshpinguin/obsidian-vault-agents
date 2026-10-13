@@ -1,11 +1,10 @@
-# src/agents/web_search.py
-"""Websuche-Agent: recherchiert per echter Google-Websuche (Search Grounding) im realen
-Internet – für alles, was NICHT im Vault steht: sowohl Realismus-/Faktenchecks von
-Konzepten aus dem Universum als auch ganz allgemeine Fragen, die aktuelles Wissen aus der
-echten Welt brauchen. Anders als die übrigen Agenten läuft er NICHT über
-litellm/WikiAgent/AgentSession – er ist bewusst nicht multiturn und hat kein eigenes
-ReAct-Tool-Set, sondern ist selbst nur als einzelner Aufruf gedacht, den z.B. der
-Chat-Agent als Tool nutzt."""
+# src/agentic/agents/web_search.py
+"""Web search agent: researches via a real Google web search (Search grounding) on the
+live internet - for everything NOT in the vault: both fact-checking vault concepts
+against reality and entirely general questions that need current real-world knowledge.
+Unlike the other agents it does NOT run through litellm/WikiAgent/AgentSession - it is
+deliberately not multi-turn and has no ReAct tool set of its own, but is itself intended
+only as a single call, used as a tool by e.g. the chat agent."""
 from google import genai
 from google.genai import types
 
@@ -18,26 +17,25 @@ AGENT_CONFIG = {
     "model": MODEL,
 }
 
-SYSTEM_INSTRUCTION = """Du bist der Websuche-Agent eines persönlichen Science-Fiction-Weltenbau-Wikis.
+SYSTEM_INSTRUCTION = """You are the web search agent of a personal Obsidian knowledge vault.
 
-Du beantwortest Anfragen, die eine echte, aktuelle Websuche brauchen – der Vault selbst kennt so etwas
-nicht, das ist ausschließlich dein Zuständigkeitsbereich. Zwei typische Arten von Anfragen:
+You answer queries that need a real, current web search - the vault itself knows nothing of that kind, it
+is exclusively your area of responsibility. Two typical kinds of query:
 
-1. Realismus-/Faktenchecks von Konzepten aus dem fiktiven Universum: Du bekommst die Beschreibung eines
-   Konzepts, einer Technologie oder eines Phänomens aus dem Universum und recherchierst, wie es sich zum
-   aktuellen realen wissenschaftlichen/technischen Kenntnisstand verhält – was davon realistisch ist bzw.
-   worauf es beruht (reale Physik, existierende/erforschte Technologien, echte Theorien), was spekulativ
-   oder (noch) nicht erreicht ist, und ob es reale Forschung/Experimente gibt, die dem nahekommen. Ziel ist
-   NICHT, das Weltenbau-Konzept "richtig" oder "falsch" zu bewerten – Science-Fiction darf von der Realität
-   abweichen. Ziel ist, verlässliche aktuelle Fakten zu liefern, anhand derer sich die Distanz zur Realität
-   einschätzen lässt.
+1. Fact-checking or plausibility-checking concepts from the vault against reality: you receive the
+   description of a concept, technology or phenomenon from the vault and research how it relates to the
+   current state of real scientific and technical knowledge - what about it is realistic or what it rests
+   on (real physics, existing or researched technologies, actual theories), what is speculative or not
+   (yet) achieved, and whether there is real research or experiments that come close to it. The goal is NOT
+   to judge the concept "right" or "wrong" - a vault's content may legitimately depart from reality. The
+   goal is to supply reliable current facts from which the distance to reality can be judged.
 
-2. Allgemeine Fragen, die aktuelles Wissen aus der echten Welt brauchen und nicht aus dem Vault-Inhalt
-   beantwortbar sind (z.B. aktuelle Ereignisse, reale Fakten, Definitionen, Vergleichswerte) – hier
-   recherchierst du ganz normal die Antwort auf die gestellte Frage.
+2. General questions that need current real-world knowledge and are not answerable from the vault content
+   (e.g. current events, real-world facts, definitions, reference values) - here you simply research the
+   answer to the question as asked.
 
-In beiden Fällen: Liefere eine kompakte, sachliche Antwort und stütze dich ausschließlich auf das, was
-deine Websuche tatsächlich findet – erfinde nichts, was die Suche nicht hergibt."""
+In both cases: deliver a compact, factual answer and rely exclusively on what your web search actually
+finds - do not invent anything the search does not support."""
 
 _client: genai.Client | None = None
 
@@ -45,12 +43,12 @@ _client: genai.Client | None = None
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        _client = genai.Client()  # liest GEMINI_API_KEY aus der Umgebung
+        _client = genai.Client()  # reads GEMINI_API_KEY from the environment
     return _client
 
 
 def _extract_sources(response) -> list[str]:
-    """Sammelt die über Search Grounding tatsächlich verwendeten Quellen (Titel + URL)."""
+    """Collects the sources actually used via Search grounding (title + URL)."""
     sources: list[str] = []
     seen: set[str] = set()
     for candidate in getattr(response, "candidates", None) or []:
@@ -66,12 +64,11 @@ def _extract_sources(response) -> list[str]:
 
 
 def web_search(query: str) -> str:
-    """Beantwortet eine einzelne Anfrage per Google Interactions API (Realismus-Check
-    eines Konzepts ODER allgemeine Wissensfrage) und gibt die gefundenen Details (inkl.
-    Quellen) als Text zurück. Gibt bei Fehlern einen les- und nutzbaren Fehlertext statt
-    einer Exception zurück, damit ein aufrufender Agent das Ergebnis direkt als
-    Tool-Antwort verwenden kann."""
-    prompt = f"{SYSTEM_INSTRUCTION}\n\nAnfrage:\n{query}"
+    """Answers a single query via the Google Interactions API (a reality check of a
+    concept OR a general knowledge question) and returns the details found (including
+    sources) as text. On failure it returns readable, usable error text instead of
+    raising, so a calling agent can use the result directly as a tool response."""
+    prompt = f"{SYSTEM_INSTRUCTION}\n\nQuery:\n{query}"
 
     try:
         interaction = _get_client().interactions.create(
@@ -81,8 +78,8 @@ def web_search(query: str) -> str:
             agent_config=AGENT_CONFIG,
         )
     except Exception as e:
-        logger.error(f"[WebSearch] Interactions-Aufruf fehlgeschlagen: {e}")
-        return f"Fehler: Die Websuche konnte nicht durchgeführt werden ({e})."
+        logger.error(f"[WebSearch] Interactions call failed: {e}")
+        return f"Error: the web search could not be performed ({e})."
 
     text = (
         getattr(interaction, "output_text", None)
@@ -90,12 +87,12 @@ def web_search(query: str) -> str:
         or ""
     ).strip()
     if not text:
-        logger.warning("[WebSearch] Leere Antwort von Interactions erhalten.")
-        return "Fehler: Die Websuche lieferte keine Antwort."
+        logger.warning("[WebSearch] Received an empty response from Interactions.")
+        return "Error: the web search returned no answer."
 
     sources = _extract_sources(interaction)
     if sources:
-        text += "\n\nQuellen:\n" + "\n".join(f"- {s}" for s in sources)
+        text += "\n\nSources:\n" + "\n".join(f"- {s}" for s in sources)
 
-    logger.info(f"[WebSearch] Anfrage bearbeitet.")
+    logger.info("[WebSearch] Query processed.")
     return text

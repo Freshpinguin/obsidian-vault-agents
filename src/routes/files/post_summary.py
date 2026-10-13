@@ -16,7 +16,7 @@ from src.schemas.file_schema import RequestSummaryRequest, RequestSummaryRespons
 
 @router.post("/summary", response_model=RequestSummaryResponse)
 def post_summary(body: RequestSummaryRequest):
-    """Fordert eine sofortige neue KI-Zusammenfassung für eine geöffnete Notiz an."""
+    """Requests an immediate new AI summary for an open note."""
     root = VAULT_ROOT.resolve()
 
     try:
@@ -25,18 +25,18 @@ def post_summary(body: RequestSummaryRequest):
         raise HTTPException(status_code=404, detail=str(e))
 
     if not resolved.is_file():
-        raise HTTPException(status_code=400, detail=f"'{body.path}' ist keine Datei.")
+        raise HTTPException(status_code=400, detail=f"'{body.path}' is not a file.")
 
     if not is_summarizable_path(resolved):
         raise HTTPException(
             status_code=400,
-            detail=f"Datei '{resolved.name}' kann nicht zusammengefasst werden (nur reguläre .md Notizen).",
+            detail=f"File '{resolved.name}' cannot be summarized (regular .md notes only).",
         )
 
-    logger.info(f"[Summary-Route] Manuelle Zusammenfassung angefordert für: {_vault_path(resolved, root)}")
+    logger.info(f"[Summary-Route] Manual summary requested for: {_vault_path(resolved, root)}")
 
     try:
-        # Führt den Summarizer-Agenten sofort aus und aktualisiert YAML-Frontmatter & .ai_map.json
+        # Runs the summarizer agent immediately and updates the YAML frontmatter & .ai_map.json
         process_obsidian_file(root, resolved)
         updated_file = _load_file_response(str(resolved))
 
@@ -45,13 +45,13 @@ def post_summary(body: RequestSummaryRequest):
             success=True,
             ai_summary=updated_file.ai_summary,
             file=updated_file,
-            message="KI-Zusammenfassung erfolgreich aktualisiert.",
+            message="AI summary updated successfully.",
         )
     except Exception as e:
-        logger.error(f"[Summary-Route] Fehler bei der Zusammenfassung von {resolved.name}: {e}")
+        logger.error(f"[Summary-Route] Error summarizing {resolved.name}: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Fehler bei der KI-Zusammenfassung: {str(e)}",
+            detail=f"Error during AI summarization: {str(e)}",
         )
 
 

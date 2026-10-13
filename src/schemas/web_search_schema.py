@@ -4,6 +4,6 @@ from pydantic import BaseModel, Field
 
 class WebSearchArgs(BaseModel):
     query: str = Field(
-        description="Die Frage oder das zu recherchierende Konzept, möglichst konkret und in sich "
-                     "verständlich formuliert (wird per echter Google-Websuche beantwortet)."
+        description="The question or the concept to research, phrased as concretely and "
+                     "self-containedly as possible (answered via a real Google web search)."
     )

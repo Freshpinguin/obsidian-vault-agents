@@ -11,8 +11,9 @@ from src.schemas.agent_schema import AgentSession
 from src.schemas.session_schema import ChatReplyResponse
 from src.core.logging_config import logger
 
-# Chat-Sessions leben nur im Prozessspeicher (kein Neustart-Überstehen, kein Multi-Worker-Betrieb) –
-# passend zum Rest der Engine, die ebenfalls ohne externe Datenbank auskommt.
+# Chat sessions live only in process memory (they do not survive a restart and do not
+# work across multiple workers) - in keeping with the rest of the engine, which also
+# gets by without an external database.
 _sessions: dict[str, AgentSession] = {}
 _sessions_lock = threading.Lock()
 
@@ -21,7 +22,7 @@ def get_session(session_id: str) -> AgentSession:
     with _sessions_lock:
         session = _sessions.get(session_id)
     if session is None:
-        raise HTTPException(status_code=404, detail=f"Session '{session_id}' nicht gefunden.")
+        raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found.")
     return session
 
 
@@ -42,8 +43,8 @@ def extract_mutations(session: AgentSession, since_index: int = 0) -> list[dict]
 
 def reply_or_502(session: AgentSession, since_index: int = 0) -> ChatReplyResponse:
     if not session.is_successful:
-        logger.error(f"[ChatAPI] Session {session.session_id} lieferte keine valide Antwort.")
-        raise HTTPException(status_code=502, detail="Der Chat-Agent konnte keine Antwort erzeugen.")
+        logger.error(f"[ChatAPI] Session {session.session_id} did not return a valid response.")
+        raise HTTPException(status_code=502, detail="The chat agent could not produce a response.")
 
     return ChatReplyResponse(
         session_id=session.session_id,
@@ -67,7 +68,7 @@ def stream_chat_session(
         try:
             session = run_func(status_callback)
             if not session.is_successful:
-                q.put({"type": "error", "detail": "Der Chat-Agent konnte keine Antwort erzeugen."})
+                q.put({"type": "error", "detail": "The chat agent could not produce a response."})
                 return
 
             sess_id = existing_session_id or session.session_id
@@ -82,7 +83,7 @@ def stream_chat_session(
                 "mutations": mutations,
             })
         except Exception as e:
-            logger.error(f"[ChatAPI] Fehler beim Streamen: {e}", exc_info=True)
+            logger.error(f"[ChatAPI] Error while streaming: {e}", exc_info=True)
             q.put({"type": "error", "detail": str(e)})
         finally:
             q.put(None)

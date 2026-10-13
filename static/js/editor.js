@@ -33,7 +33,7 @@ import {
 } from "./dom.js";
 
 // ==========================================
-// 4. View Mode Umschalter, Editor & Dateioperationen (Speichern & Löschen)
+// 4. View mode toggle, editor & file operations (save & delete)
 // ==========================================
 export function checkEditorDirty() {
   if (!docBodyEditorEl) return;
@@ -42,13 +42,13 @@ export function checkEditorDirty() {
     editorStatusDotEl.classList.toggle("unsaved", isDirty);
   }
   if (editorStatusTextEl) {
-    editorStatusTextEl.textContent = isDirty ? "Ungespeicherte Änderungen" : "Bereit zum Bearbeiten";
+    editorStatusTextEl.textContent = isDirty ? "Unsaved changes" : "Ready to edit";
   }
   if (btnSaveContent) {
     btnSaveContent.classList.toggle("unsaved", isDirty);
   }
   if (btnSaveLabel) {
-    btnSaveLabel.textContent = isDirty ? "Speichern *" : "Speichern";
+    btnSaveLabel.textContent = isDirty ? "Save *" : "Save";
   }
 }
 
@@ -61,7 +61,7 @@ if (btnModeRendered) {
     if (docEditorContainerEl) docEditorContainerEl.style.display = "none";
     docBodyRawEl.style.display = "none";
 
-    // Rendert eventuell im Editor geschriebene Änderungen sofort in der Vorschau
+    // Immediately renders any changes written in the editor into the preview
     if (docBodyEditorEl) {
       docBodyRenderedEl.innerHTML = renderMarkdown(docBodyEditorEl.value);
       docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
@@ -102,7 +102,7 @@ if (docBodyEditorEl) {
   });
 }
 
-// Datei speichern
+// Save file
 export async function saveCurrentFile() {
   if (!state.currentFile || state.isSavingFile || !docBodyEditorEl) return;
   state.isSavingFile = true;
@@ -114,7 +114,7 @@ export async function saveCurrentFile() {
     const data = await saveFileContent(state.currentFile, content);
     state.currentFileRawContent = data.file ? data.file.raw_content : content;
     if (data.file) {
-      docDatesEl.textContent = `Zuletzt geändert: ${data.file.last_modified || "gerade eben"}`;
+      docDatesEl.textContent = `Last modified: ${data.file.last_modified || "just now"}`;
       docBodyRenderedEl.innerHTML = renderMarkdown(data.file.body || content);
       docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
         linkEl.addEventListener("click", (e) => {
@@ -125,9 +125,9 @@ export async function saveCurrentFile() {
       });
     }
     checkEditorDirty();
-    showToast("Notiz erfolgreich gespeichert.", "success");
+    showToast("Note saved successfully.", "success");
   } catch (err) {
-    showToast(`Fehler beim Speichern: ${err.message}`, "error");
+    showToast(`Error while saving: ${err.message}`, "error");
   } finally {
     state.isSavingFile = false;
     btnSaveContent.disabled = false;
@@ -139,7 +139,7 @@ if (btnSaveContent) {
   btnSaveContent.addEventListener("click", saveCurrentFile);
 }
 
-// Tastenkombination Cmd+S / Strg+S zum Speichern
+// Keyboard shortcut Cmd+S / Ctrl+S to save
 window.addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
     if (state.currentFile) {
@@ -149,7 +149,7 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// Datei löschen (Modal & Bestätigung)
+// Delete file (modal & confirmation)
 export function openDeleteModal() {
   if (!state.currentFile) return;
   if (deleteFileNameEl) deleteFileNameEl.textContent = state.currentFile.split("/").pop();
@@ -177,14 +177,14 @@ if (btnConfirmDelete) {
     if (!state.currentFile || state.isDeletingFile) return;
     state.isDeletingFile = true;
     const btnConfirmText = document.getElementById("btn-confirm-delete-text");
-    if (btnConfirmText) btnConfirmText.textContent = "Löscht...";
+    if (btnConfirmText) btnConfirmText.textContent = "Deleting...";
     btnConfirmDelete.disabled = true;
 
     try {
       const targetPath = state.currentFile;
       await deleteFile(targetPath);
       closeDeleteModal();
-      showToast(`Notiz '${targetPath.split("/").pop()}' wurde gelöscht.`, "success");
+      showToast(`Note '${targetPath.split("/").pop()}' was deleted.`, "success");
 
       state.currentFile = null;
       state.currentFileRawContent = "";
@@ -192,12 +192,12 @@ if (btnConfirmDelete) {
       fileContainerEl.style.display = "none";
       viewerControlsEl.style.display = "none";
       emptyStateEl.style.display = "flex";
-      bcFilenameEl.textContent = "Keine Datei geöffnet";
+      bcFilenameEl.textContent = "No file open";
 
       if (activeFilePill && activeFilePillText) {
         activeFilePill.classList.remove("has-file");
         activeFilePillText.textContent = "Kein Fokus";
-        activeFilePill.title = "Keine Datei ausgewählt";
+        activeFilePill.title = "No file selected";
       }
       if (chatFileContextBanner) {
         chatFileContextBanner.classList.remove("active");
@@ -205,11 +205,11 @@ if (btnConfirmDelete) {
 
       await loadFileTree();
     } catch (err) {
-      showToast(`Fehler beim Löschen: ${err.message}`, "error");
+      showToast(`Error while deleting: ${err.message}`, "error");
     } finally {
       state.isDeletingFile = false;
       btnConfirmDelete.disabled = false;
-      if (btnConfirmText) btnConfirmText.textContent = "Löschen";
+      if (btnConfirmText) btnConfirmText.textContent = "Delete";
     }
   });
 }

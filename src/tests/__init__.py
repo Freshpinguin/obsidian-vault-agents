@@ -1,1 +1,1 @@
-# Testsuite für obsidian-vault-agents (siehe conftest.py für die Infrastruktur).
+# Test suite for obsidian-vault-agents (see conftest.py for the infrastructure).

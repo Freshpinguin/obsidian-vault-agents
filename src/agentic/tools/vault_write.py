@@ -1,5 +1,5 @@
 # src/agentic/tools/vault_write.py
-"""WikiTool-Instanzen für schreibende Operationen im Vault."""
+"""WikiTool instances for write operations on the vault."""
 from src.schemas.tool_args import (
     CreateDirectoryArgs,
     CreateFileArgs,
@@ -18,35 +18,35 @@ from src.navigation import (
 
 create_directory_tool = WikiTool(
     name="create_directory",
-    description="Legt einen neuen (leeren) Ordner im Vault an, inkl. fehlender Zwischenordner.",
+    description="Creates a new (empty) folder in the vault, including any missing parent folders.",
     parameters=CreateDirectoryArgs,
     func=create_directory,
 )
 
 create_file_tool = WikiTool(
     name="create_file",
-    description="Legt eine neue .md-Datei mit dem gegebenen Inhalt im Vault an (Pfad darf noch nicht existieren).",
+    description="Creates a new .md file with the given content in the vault (the path must not exist yet).",
     parameters=CreateFileArgs,
     func=create_file,
 )
 
 move_file_tool = WikiTool(
     name="move_file",
-    description="Verschiebt/benennt eine bestehende Datei im Vault um (Zielpfad darf noch nicht existieren).",
+    description="Moves/renames an existing file in the vault (the destination path must not exist yet).",
     parameters=MoveFileArgs,
     func=move_file,
 )
 
 edit_file_tool = WikiTool(
     name="edit_file",
-    description="Ersetzt den Inhalt einer BESTEHENDEN .md-Datei im Vault (Frontmatter bleibt erhalten). Für Änderungen an vorhandenen Dateien - NICHT move_file+create_file kombinieren.",
+    description="Replaces the content of an EXISTING .md file in the vault (frontmatter is preserved). Use this for changes to existing files - do NOT combine move_file+create_file.",
     parameters=EditFileArgs,
     func=edit_file,
 )
 
 delete_file_tool = WikiTool(
     name="delete_file",
-    description="Löscht eine bestehende .md-Datei im Vault dauerhaft.",
+    description="Permanently deletes an existing .md file from the vault.",
     parameters=DeleteFileArgs,
     func=delete_file,
 )

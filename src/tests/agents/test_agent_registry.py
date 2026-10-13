@@ -28,8 +28,8 @@ EXPECTED_WIKI_AGENTS = {"Chat", "TaskAgent", "Librarian", "Summarizer", "FolderS
 
 
 def test_meta_all_wiki_agents_registered():
-    """Findet per Introspektion alle WikiAgent-Instanzen in src.agentic.agents und prüft,
-    dass jeder Agent in EXPECTED_WIKI_AGENTS vorkommt."""
+    """Uses introspection to find all WikiAgent instances in src.agentic.agents and
+    checks that every agent appears in EXPECTED_WIKI_AGENTS."""
     import src.agentic.agents as agents_pkg
 
     found_agents = {}
@@ -46,15 +46,15 @@ def test_meta_all_wiki_agents_registered():
 
 
 def test_smoke_chat_agent(vault: Path, fake_llm: FakeLLM):
-    fake_llm.script("Chat", final({"reply": "Hallo zurück!"}))
-    session = start_wiki_chat("Hallo")
+    fake_llm.script("Chat", final({"reply": "Hello again!"}))
+    session = start_wiki_chat("Hello")
 
     assert session.is_successful
     calls = fake_llm.calls_for("Chat")
     assert len(calls) == 1
     call = calls[0]
     assert call.system_prompt.startswith(ChatAgent.system_prompt)
-    assert "## Aktuelle Vault-Übersicht (ai_map)" in call.system_prompt
+    assert "## Current vault overview (ai_map)" in call.system_prompt
     assert set(call.tool_names) == {t.name for t in ChatAgent.tools}
 
 
@@ -79,7 +79,7 @@ def test_smoke_task_agent(vault: Path, fake_llm: FakeLLM, sync_threads):
 
 
 def test_smoke_librarian(vault: Path, fake_llm: FakeLLM):
-    fake_llm.script("Librarian", final({"answer": "Terra existiert.", "sources": ["Grundannahmen.md"]}))
+    fake_llm.script("Librarian", final({"answer": "Terra existiert.", "sources": ["Overview.md"]}))
     session = ask_librarian("Gibt es Terra?")
 
     assert session.is_successful
@@ -95,14 +95,14 @@ def test_smoke_summarizer(vault: Path, fake_llm: FakeLLM):
     # Summarizer -> triggers FolderSummarizer on parent
     fake_llm.script(
         "Summarizer",
-        final({"document_summary": "Neue Notiz Zusammenfassung", "filemap_summary": "Kurzfassung"}),
+        final({"document_summary": "New note summary", "filemap_summary": "Short form"}),
     )
     fake_llm.script(
         "FolderSummarizer",
-        final({"folder_summary": "Ordner Zusammenfassung", "dirmap_summary": "Ordner kurz"}),
+        final({"folder_summary": "Folder summary", "dirmap_summary": "Folder short"}),
     )
 
-    res = process_obsidian_file(vault, vault / "Grundannahmen.md")
+    res = process_obsidian_file(vault, vault / "Overview.md")
     assert res is True
 
     calls_sum = fake_llm.calls_for("Summarizer")
@@ -115,10 +115,10 @@ def test_smoke_summarizer(vault: Path, fake_llm: FakeLLM):
 def test_smoke_folder_summarizer(vault: Path, fake_llm: FakeLLM):
     fake_llm.script(
         "FolderSummarizer",
-        final({"folder_summary": "Kulturen Übersicht", "dirmap_summary": "Kulturen kurz"}),
+        final({"folder_summary": "Meetings Übersicht", "dirmap_summary": "Meetings kurz"}),
     )
 
-    res = process_folder_summary(vault, vault / "Kulturen")
+    res = process_folder_summary(vault, vault / "Meetings")
     assert res is True
 
     calls = fake_llm.calls_for("FolderSummarizer")
@@ -129,7 +129,7 @@ def test_smoke_folder_summarizer(vault: Path, fake_llm: FakeLLM):
 
 
 def test_smoke_context_compactor(fake_llm: FakeLLM):
-    fake_llm.script("Compactor", raw("Zusammenfassung des bisherigen Fortschritts."))
+    fake_llm.script("Compactor", raw("Summary of the progress so far."))
 
     # Construct session with large messages exceeding 30,000 chars
     large_text = "A" * 8000
@@ -162,11 +162,11 @@ def test_smoke_context_compactor(fake_llm: FakeLLM):
 
 
 def test_smoke_web_search(fake_genai):
-    fake_genai.text = "Alcubierre-Antrieb ist theoretisch untersucht."
+    fake_genai.text = "Batch ingestion is a well-studied pattern."
     fake_genai.sources = [("NASA Breakthrough Propulsion", "https://nasa.gov/warp")]
 
     res = web_search("Ist Warp realistisch?")
-    assert "Alcubierre-Antrieb" in res
+    assert "Batch ingestion" in res
     assert "https://nasa.gov/warp" in res
     assert len(fake_genai.calls) == 1
     call = fake_genai.calls[0]
@@ -177,9 +177,9 @@ def test_smoke_web_search(fake_genai):
 
 
 def test_smoke_reasoner(fake_antigravity):
-    fake_antigravity.reply = "Ausführliche Begründung zur Zeitdilatation."
+    fake_antigravity.reply = "Detailed reasoning about the schema trade-off."
 
-    res = run_reasoning("Erkläre die Zeitdilatation in unserem Setting.")
-    assert res == "Ausführliche Begründung zur Zeitdilatation."
+    res = run_reasoning("Explain the schema trade-off in our setting.")
+    assert res == "Detailed reasoning about the schema trade-off."
     assert len(fake_antigravity.prompts) == 1
-    assert "Zeitdilatation" in fake_antigravity.prompts[0]
+    assert "schema trade-off" in fake_antigravity.prompts[0]

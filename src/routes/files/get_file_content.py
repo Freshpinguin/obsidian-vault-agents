@@ -16,7 +16,7 @@ from src.schemas.file_schema import FileContentResponse
 
 
 def _load_file_response(path_str: str) -> FileContentResponse:
-    """Lädt und parst eine Datei aus dem Vault."""
+    """Loads and parses a file from the vault."""
     root = _vault_root().resolve()
 
 
@@ -26,7 +26,7 @@ def _load_file_response(path_str: str) -> FileContentResponse:
         raise HTTPException(status_code=404, detail=str(e))
 
     if not resolved.is_file():
-        raise HTTPException(status_code=404, detail=f"Pfad '{path_str}' ist keine Datei.")
+        raise HTTPException(status_code=404, detail=f"Path '{path_str}' is not a file.")
 
     raw_content = resolved.read_text(encoding="utf-8")
     fm, body = _read_md(resolved)
@@ -58,12 +58,12 @@ def _load_file_response(path_str: str) -> FileContentResponse:
 
 
 @router.get("/content", response_model=FileContentResponse)
-def get_file_content(path: str = Query(..., description="Relativer oder vollständiger Vault-Pfad zur Datei")):
-    """Gibt den Inhalt und Metadaten einer Datei anhand des Pfads zurück."""
+def get_file_content(path: str = Query(..., description="Relative or full vault path to the file")):
+    """Returns the content and metadata of a file by its path."""
     return _load_file_response(path)
 
 
 @router.get("/{path:path}", response_model=FileContentResponse)
 def get_file_content_by_path(path: str):
-    """Alias für get_file_content über Pfad-Parameter (z.B. /files/Kulturen/Beispielvolk.md)."""
+    """Alias for get_file_content via a path parameter (e.g. /files/Reference/Glossary.md)."""
     return _load_file_response(path)

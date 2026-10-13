@@ -47,7 +47,7 @@ def test_tool_call_invalid_arguments():
     )
     # Missing required 'query'
     res = tool.call({"limit": "not_an_int"})
-    assert "Fehler: Ungültige Argumente für Tool 'dummy_tool'" in res
+    assert "Error: invalid arguments for tool 'dummy_tool'" in res
 
 
 def test_tool_call_function_raises_exception():
@@ -61,7 +61,7 @@ def test_tool_call_function_raises_exception():
         func=_exploding_func,
     )
     res = tool.call({"query": "explode"})
-    assert "Fehler bei Ausführung von Tool 'exploding_tool': Something exploded" in res
+    assert "Error executing tool 'exploding_tool': Something exploded" in res
 
 
 def test_tool_call_non_string_return_converted_to_str():

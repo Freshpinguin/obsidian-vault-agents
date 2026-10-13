@@ -4,14 +4,14 @@ import threading
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Umgebungsvariablen (.env) vor weiteren Modul-Initialisierungen laden
+# Load environment variables (.env) before any further module initialization
 load_dotenv()
 
 from fastapi import FastAPI
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-# Importiere unsere Logik aus den Modulen
+# Import our logic from the modules
 from src.core.obsidian_processor import (
     is_summarizable_path,
     move_map_entry,
@@ -25,27 +25,27 @@ from src.core.logging_config import logger
 from src.core.map_maintenance import run_ai_map_maintenance
 from src.routes import router as api_router
 
-# Die FastAPI App initialisieren
+# Initialize the FastAPI app
 app = FastAPI(title="Obsidian Vault Agents")
 app.include_router(api_router)
 
 from fastapi.staticfiles import StaticFiles
 
-BASE_DIR = Path(__file__).resolve().parents[1]   # Repo-Wurzel
+BASE_DIR = Path(__file__).resolve().parents[1]   # Repository root
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
-# Der Ordner, den wir überwachen (im Docker-Container /app/data, lokal ./data.example)
+# The folder we watch (/app/data in the Docker container, ./data.example locally)
 WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
 VAULT_ROOT = Path(WATCH_DIR).resolve()
 
 from src.core.events import vault_events
 
-# Debounced: Zusammenfassungen werden erst 30min nach der letzten Änderung erzeugt
+# Debounced: summaries are only generated 30 minutes after the last change
 summary_scheduler = SummaryScheduler(vault_root=VAULT_ROOT)
 
 class MarkdownHandler(FileSystemEventHandler):
-    """Definiert, was passiert, wenn eine Datei geändert wird (egal ob durch
-    manuelle Bearbeitung, die Engine selbst oder einen Sync wie Syncthing)."""
+    """Defines what happens when a file changes (whether through manual editing, the
+    engine itself, or a sync tool such as Syncthing)."""
 
     def _is_ignored(self, path: str) -> bool:
         return ".git" in path.split(os.sep)
@@ -62,17 +62,17 @@ class MarkdownHandler(FileSystemEventHandler):
             try:
                 register_pending_directory(Path(event.src_path), VAULT_ROOT)
             except Exception as e:
-                logger.error(f"[Watchdog] AI-Map-Ordnereintrag fehlgeschlagen fuer {event.src_path}: {e}")
+                logger.error(f"[Watchdog] AI map folder entry failed for {event.src_path}: {e}")
             vault_events.broadcast("dir_created", {"path": event.src_path})
             return
-        logger.info(f"[Watchdog] Erstellt: {event.src_path}")
-        # Sofort in .ai_map.json + .index.md vormerken, damit eine von Hand (oder per
-        # Sync) angelegte Notiz fuer die Agenten unmittelbar sichtbar ist. Ohne das
-        # taucht sie erst auf, wenn der um 30 Minuten verzoegerte Summarizer laeuft.
+        logger.info(f"[Watchdog] Created: {event.src_path}")
+        # Register in .ai_map.json + .index.md straight away, so a note created by hand
+        # (or via sync) is immediately visible to the agents. Without this it would only
+        # appear once the 30-minute-delayed summarizer runs.
         try:
             register_pending_file(Path(event.src_path), VAULT_ROOT)
         except Exception as e:
-            logger.error(f"[Watchdog] AI-Map-Eintrag fehlgeschlagen fuer {event.src_path}: {e}")
+            logger.error(f"[Watchdog] AI map entry failed for {event.src_path}: {e}")
         self._maybe_schedule(event.src_path)
         vault_events.broadcast("created", {"path": event.src_path})
 
@@ -81,7 +81,7 @@ class MarkdownHandler(FileSystemEventHandler):
             return
         if event.is_directory:
             return
-        logger.info(f"[Watchdog] Geändert: {event.src_path}")
+        logger.info(f"[Watchdog] Modified: {event.src_path}")
         self._maybe_schedule(event.src_path)
         vault_events.broadcast("modified", {"path": event.src_path})
 
@@ -89,19 +89,19 @@ class MarkdownHandler(FileSystemEventHandler):
         if self._is_ignored(event.src_path):
             return
         if event.is_directory:
-            # Mit dem Ordner verschwindet sein gesamter Inhalt aus der AI-Map.
+            # Removing the folder removes all of its content from the AI map.
             try:
                 remove_map_entry(Path(event.src_path), VAULT_ROOT)
             except Exception as e:
-                logger.error(f"[Watchdog] AI-Map-Aufraeumen fehlgeschlagen fuer {event.src_path}: {e}")
+                logger.error(f"[Watchdog] AI map cleanup failed for {event.src_path}: {e}")
             vault_events.broadcast("dir_deleted", {"path": event.src_path})
             return
-        logger.info(f"[Watchdog] Gelöscht: {event.src_path}")
-        # Auch von Hand geloeschte Notizen sofort aus der AI-Map nehmen.
+        logger.info(f"[Watchdog] Deleted: {event.src_path}")
+        # Remove manually deleted notes from the AI map immediately too.
         try:
             remove_map_entry(Path(event.src_path), VAULT_ROOT)
         except Exception as e:
-            logger.error(f"[Watchdog] AI-Map-Aufraeumen fehlgeschlagen fuer {event.src_path}: {e}")
+            logger.error(f"[Watchdog] AI map cleanup failed for {event.src_path}: {e}")
         summary_scheduler.cancel(Path(event.src_path))
         vault_events.broadcast("deleted", {"path": event.src_path})
 
@@ -112,11 +112,11 @@ class MarkdownHandler(FileSystemEventHandler):
             vault_events.broadcast("dir_moved", {"src_path": event.src_path, "dest_path": event.dest_path})
             return
         logger.info(f"[Watchdog] Verschoben: {event.src_path} -> {event.dest_path}")
-        # Auch von Hand (z.B. in Obsidian) verschobene Notizen sofort umtragen.
+        # Re-register notes moved by hand (e.g. inside Obsidian) immediately too.
         try:
             move_map_entry(Path(event.src_path), Path(event.dest_path), VAULT_ROOT)
         except Exception as e:
-            logger.error(f"[Watchdog] AI-Map-Umzug fehlgeschlagen fuer {event.src_path}: {e}")
+            logger.error(f"[Watchdog] AI map move failed for {event.src_path}: {e}")
         summary_scheduler.cancel(Path(event.src_path))
         self._maybe_schedule(event.dest_path)
         vault_events.broadcast("moved", {"src_path": event.src_path, "dest_path": event.dest_path})
@@ -124,13 +124,13 @@ class MarkdownHandler(FileSystemEventHandler):
 _observer = None
 
 def run_watchdog():
-    """Startet den Beobachter-Prozess."""
+    """Starts the watchdog observer process."""
     global _observer
     event_handler = MarkdownHandler()
     _observer = Observer()
     _observer.schedule(event_handler, str(VAULT_ROOT), recursive=True)
     _observer.start()
-    logger.info(f"[Watchdog] Gestartet. Überwache: {VAULT_ROOT}")
+    logger.info(f"[Watchdog] Started. Watching: {VAULT_ROOT}")
 
     try:
         while _observer.is_alive():
@@ -142,19 +142,19 @@ def run_watchdog():
             _observer.stop()
             _observer.join(timeout=2)
 
-# Dieser Block wird ausgeführt, sobald der Server startet
+# This block runs as soon as the server starts
 @app.on_event("startup")
 def startup_event():
-    # Starte den Watchdog im Hintergrund (Daemon-Thread)
+    # Start the watchdog in the background (daemon thread)
     watchdog_thread = threading.Thread(target=run_watchdog, daemon=True)
     watchdog_thread.start()
 
-    # Starte den Git Auto-Backup im Hintergrund (Daemon-Thread)
+    # Start the git auto-backup in the background (daemon thread)
     backup_thread = threading.Thread(target=run_auto_backup, daemon=True)
     backup_thread.start()
 
-    # Starte die AI-Map-Wartung im Hintergrund (Daemon-Thread):
-    # entfernt verwaiste Einträge und plant ausstehende Zusammenfassungen ein
+    # Start the AI map maintenance in the background (daemon thread):
+    # removes orphaned entries and schedules pending summaries
     maintenance_interval = int(os.getenv("MAP_MAINTENANCE_INTERVAL_MINUTES", 60))
     maintenance_thread = threading.Thread(
         target=run_ai_map_maintenance,

@@ -13,15 +13,15 @@ import {
   btnCloseCreateModal,
 } from "./dom.js";
 
-// Ordner-Erstellung ist im Frontend vorlaeufig entfernt; Agenten legen Ordner
-// weiterhin ueber vault_mutation.create_directory an.
+// Folder creation has been removed from the frontend for now; agents still create
+// folders via vault_mutation.create_directory.
 export function openCreateModal() {
   if (createModalTitle) {
-    createModalTitle.textContent = "Neue Notiz";
+    createModalTitle.textContent = "New note";
   }
   if (createNameInput) {
     createNameInput.value = "";
-    createNameInput.placeholder = "Notizname (z. B. Meine Notiz)";
+    createNameInput.placeholder = "Note name (e.g. My Note)";
   }
   if (createModal) {
     createModal.classList.add("open");
@@ -41,11 +41,11 @@ async function handleConfirmCreate() {
   if (!createNameInput) return;
   const name = createNameInput.value.trim();
   if (!name) {
-    showToast("Bitte einen Namen eingeben.", "error");
+    showToast("Please enter a name.", "error");
     return;
   }
 
-  // Übergeordneter Ordner: Ordner der aktuell geöffneten Notiz oder Vault-Root
+  // Parent folder: the folder of the currently open note, or the vault root
   let parent = "";
   if (state.currentFile && state.currentFile.includes("/")) {
     parent = state.currentFile.substring(0, state.currentFile.lastIndexOf("/"));
@@ -53,11 +53,11 @@ async function handleConfirmCreate() {
 
   let cleanName = name.replace(/\\/g, "/").trim().replace(/^\/+/, "");
   if (!cleanName || cleanName === ".md") {
-    showToast("Bitte einen gültigen Notiznamen eingeben.", "error");
+    showToast("Please enter a valid note name.", "error");
     return;
   }
 
-  // Notizen werden immer als .md Datei angelegt
+  // Notes are always created as .md files
   if (cleanName.toLowerCase().endsWith(".md")) {
     cleanName = cleanName.slice(0, -3) + ".md";
   } else {

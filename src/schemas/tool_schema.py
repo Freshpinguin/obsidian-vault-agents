@@ -4,12 +4,12 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 
 class WikiTool(BaseModel):
-    """Ein Werkzeug, das ein WikiAgent im Rahmen einer ReAct-Schleife aufrufen kann.
+    """A tool that a WikiAgent can call as part of a ReAct loop.
 
-    'parameters' beschreibt die erwarteten Argumente als Pydantic-Modell (daraus wird
-    das JSON-Schema fürs Function-Calling erzeugt). 'func' ist der tatsächliche Python-
-    Aufruf, der mit den validierten Argumenten als Keyword-Argumente ausgeführt wird
-    und dessen Ergebnis als String an das LLM zurückgegeben wird.
+    'parameters' describes the expected arguments as a Pydantic model (the JSON schema
+    for function calling is generated from it). 'func' is the actual Python callable,
+    executed with the validated arguments as keyword arguments, whose result is
+    returned to the LLM as a string.
     """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -19,7 +19,7 @@ class WikiTool(BaseModel):
     func: Callable[..., str]
 
     def to_openai_schema(self) -> dict:
-        """Function-Calling-Schema im von litellm/OpenAI erwarteten Format."""
+        """Function-calling schema in the format litellm/OpenAI expects."""
         schema = self.parameters.model_json_schema()
         schema.pop("title", None)
         for prop in schema.get("properties", {}).values():
@@ -34,17 +34,17 @@ class WikiTool(BaseModel):
         }
 
     def call(self, arguments: dict) -> str:
-        """Führt das Tool aus und gibt IMMER einen String zurück (auch im Fehlerfall),
-        damit das Ergebnis direkt als Tool-Nachricht ans LLM zurückgehen kann."""
+        """Executes the tool and ALWAYS returns a string (including on failure), so
+        the result can go straight back to the LLM as a tool message."""
         try:
             valid_args = self.parameters.model_validate(arguments)
         except ValidationError as e:
-            return f"Fehler: Ungültige Argumente für Tool '{self.name}': {e}"
+            return f"Error: invalid arguments for tool '{self.name}': {e}"
 
         try:
             result = self.func(**valid_args.model_dump())
         except Exception as e:
-            return f"Fehler bei Ausführung von Tool '{self.name}': {e}"
+            return f"Error executing tool '{self.name}': {e}"
 
         return result if isinstance(result, str) else str(result)
 

@@ -7,23 +7,21 @@ from src.core.logging_config import logger
 
 DEBOUNCE_SECONDS = 30 * 60   # 30 Minuten
 
-# Kaskadierende Ordner-Zusammenfassungen (Großeltern-Ordner und weiter nach oben)
-# laufen bewusst langsamer als die direkte Datei-/Elternordner-Aktualisierung, damit
-# bei vielen Änderungen in verschachtelten Unterordnern nicht bei jeder einzelnen
-# sofort die gesamte Kette bis zur Wurzel neu berechnet wird.
+# Cascading folder summaries (grandparent folders and further up) deliberately run
+# more slowly than the direct file/parent-folder update, so that many changes in
+# nested subfolders do not each immediately recompute the entire chain up to the root.
 CASCADE_DEBOUNCE_SECONDS = DEBOUNCE_SECONDS * 2
 
 
 class FolderSummaryScheduler:
-    """Kaskadiert Ordner-Zusammenfassungen nach oben (Großeltern-Ordner und weiter),
-    nachdem sich die Zusammenfassung eines direkten Elternordners bereits geändert hat.
+    """Cascades folder summaries upwards (grandparent folders and beyond) after the
+    summary of a direct parent folder has already changed.
 
-    Läuft mit CASCADE_DEBOUNCE_SECONDS statt DEBOUNCE_SECONDS und wird pro Ordner
-    debounced: weitere Trigger für denselben Ordner innerhalb des Zeitfensters setzen
-    den Timer zurück, damit bei vielen Änderungen in Unterordnern nicht wiederholt
-    unnötig die gesamte Kette bis zur Wurzel neu berechnet wird. Nach Ablauf wird nur
-    dann eine Ebene weiter nach oben kaskadiert, wenn sich die Zusammenfassung dieses
-    Ordners durch den Lauf tatsächlich geändert hat.
+    Runs with CASCADE_DEBOUNCE_SECONDS instead of DEBOUNCE_SECONDS and is debounced per
+    folder: further triggers for the same folder within the time window reset the timer,
+    so that many changes in subfolders do not repeatedly recompute the entire chain up
+    to the root unnecessarily. Once it fires, it cascades one level further up only if
+    this folder's summary actually changed during the run.
     """
 
     def __init__(self, vault_root: Path, delay_seconds: int = CASCADE_DEBOUNCE_SECONDS):
@@ -33,29 +31,29 @@ class FolderSummaryScheduler:
         self._timers: dict[str, threading.Timer] = {}
 
     def schedule(self, folder_path: Path):
-        """Plant (oder verschiebt) die kaskadierende Ordner-Zusammenfassung für folder_path."""
+        """Schedules (or postpones) the cascading folder summary for folder_path."""
         key = str(folder_path)
         with self._lock:
             existing = self._timers.get(key)
             if existing is not None:
                 existing.cancel()
-                logger.info(f"[FolderScheduler] Kaskaden-Timer für {folder_path} durch neue Änderung zurückgesetzt.")
+                logger.info(f"[FolderScheduler] Cascade timer for {folder_path} reset by a new change.")
 
             timer = threading.Timer(self.delay_seconds, self._run, args=(folder_path,))
             timer.daemon = True
             self._timers[key] = timer
             timer.start()
 
-        logger.info(f"[FolderScheduler] Kaskadierende Ordner-Zusammenfassung für {folder_path} in {self.delay_seconds // 60} Minuten geplant.")
+        logger.info(f"[FolderScheduler] Cascading folder summary for {folder_path} scheduled in {self.delay_seconds // 60} minutes.")
 
     def cancel(self, folder_path: Path):
-        """Verwirft eine geplante Kaskaden-Zusammenfassung."""
+        """Discards a scheduled cascade summary."""
         key = str(folder_path)
         with self._lock:
             existing = self._timers.pop(key, None)
         if existing is not None:
             existing.cancel()
-            logger.info(f"[FolderScheduler] Geplante Kaskaden-Zusammenfassung für {folder_path} verworfen.")
+            logger.info(f"[FolderScheduler] Scheduled cascade summary for {folder_path} discarded.")
 
     def _run(self, folder_path: Path):
         with self._lock:
@@ -65,16 +63,16 @@ class FolderSummaryScheduler:
             if changed and folder_path != self.vault_root:
                 self.schedule(folder_path.parent)
         except Exception as e:
-            logger.error(f"[FolderScheduler] Fehler beim Verarbeiten von {folder_path}: {e}")
+            logger.error(f"[FolderScheduler] Error processing {folder_path}: {e}")
 
 
 class SummaryScheduler:
-    """Verzögert die Zusammenfassung eines Dokuments um DEBOUNCE_SECONDS.
+    """Delays the summarization of a document by DEBOUNCE_SECONDS.
 
-    Jede weitere inhaltliche Änderung am selben Dokument innerhalb des Zeitfensters
-    setzt den Timer zurück und verwirft die zuvor geplante Ausführung. Events, die
-    nur vom eigenen Zurückschreiben der Zusammenfassung stammen (der Dokumenteninhalt
-    bleibt dabei unverändert), werden ignoriert, um eine Endlosschleife zu vermeiden.
+    Every further change to the content of the same document within the time window
+    resets the timer and discards the previously scheduled run. Events that stem only
+    from writing the summary back ourselves (the document content stays unchanged) are
+    ignored, to avoid an endless loop.
     """
 
     def __init__(self, vault_root: Path, delay_seconds: int = DEBOUNCE_SECONDS):
@@ -86,13 +84,13 @@ class SummaryScheduler:
         self._folder_scheduler = FolderSummaryScheduler(vault_root)
 
     def schedule(self, filepath: Path, force: bool = False):
-        """Plant (oder verschiebt) die Zusammenfassung für filepath.
+        """Schedules (or postpones) the summarization of filepath.
 
-        force=True überspringt die Inhaltswechsel-Prüfung, z.B. wenn bereits
-        anderweitig feststeht, dass eine Zusammenfassung fehlt (siehe map_maintenance.py).
+        force=True skips the content-change check, e.g. when it is already
+        otherwise established that a summary is missing (see map_maintenance.py).
         """
         if not force and not self._manager.has_content_changed(filepath):
-            logger.debug(f"[Scheduler] {filepath.name}: kein inhaltlicher Wechsel, ignoriere Event.")
+            logger.debug(f"[Scheduler] {filepath.name}: no content change, ignoring event.")
             return
 
         key = str(filepath)
@@ -100,23 +98,23 @@ class SummaryScheduler:
             existing = self._timers.get(key)
             if existing is not None:
                 existing.cancel()
-                logger.info(f"[Scheduler] Timer für {filepath.name} durch neue Änderung zurückgesetzt.")
+                logger.info(f"[Scheduler] Timer for {filepath.name} reset by a new change.")
 
             timer = threading.Timer(self.delay_seconds, self._run, args=(filepath,))
             timer.daemon = True
             self._timers[key] = timer
             timer.start()
 
-        logger.info(f"[Scheduler] Zusammenfassung für {filepath.name} in {self.delay_seconds // 60} Minuten geplant.")
+        logger.info(f"[Scheduler] Summary for {filepath.name} scheduled in {self.delay_seconds // 60} minutes.")
 
     def cancel(self, filepath: Path):
-        """Verwirft eine geplante Zusammenfassung, z.B. weil die Datei gelöscht/verschoben wurde."""
+        """Discards a scheduled summary, e.g. because the file was deleted or moved."""
         key = str(filepath)
         with self._lock:
             existing = self._timers.pop(key, None)
         if existing is not None:
             existing.cancel()
-            logger.info(f"[Scheduler] Geplante Zusammenfassung für {filepath.name} verworfen.")
+            logger.info(f"[Scheduler] Scheduled summary for {filepath.name} discarded.")
 
     def _run(self, filepath: Path):
         with self._lock:
@@ -127,4 +125,4 @@ class SummaryScheduler:
             if parent_folder_changed and filepath.parent != self.vault_root:
                 self._folder_scheduler.schedule(grandparent)
         except Exception as e:
-            logger.error(f"[Scheduler] Fehler beim Verarbeiten von {filepath}: {e}")
+            logger.error(f"[Scheduler] Error processing {filepath}: {e}")

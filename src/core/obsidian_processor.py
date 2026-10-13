@@ -8,25 +8,25 @@ import yaml  # pip install pyyaml
 
 from src.core.logging_config import logger
 
-# Regex zum sauberen Extrahieren des Obsidian YAML-Frontmatters
+# Regex for cleanly extracting the Obsidian YAML frontmatter
 FRONTMATTER_PATTERN = re.compile(r"^---\n(.*?)\n---\n(.*)", re.DOTALL)
 
-# Regex für Obsidian-Wikilinks: [[Ziel]], [[Ziel|Anzeigetext]], [[Ziel#Abschnitt|Anzeigetext]]
+# Regex for Obsidian wikilinks: [[target]], [[target|label]], [[target#section|label]]
 WIKILINK_PATTERN = re.compile(r"\[\[(.+?)\]\]")
 
-# Platzhalter, solange noch keine echte KI-Zusammenfassung existiert. Die periodische
-# Wartung (map_maintenance) erkennt genau diesen Text und plant die Zusammenfassung ein.
-PENDING_SUMMARY_TEXT = "Zusammenfassung ausstehend..."
+# Placeholder used until a real AI summary exists. The periodic maintenance pass
+# (map_maintenance) recognizes exactly this text and schedules the summary.
+PENDING_SUMMARY_TEXT = "Summary pending..."
 
 
 def get_content_hash(text: str) -> str:
-    """Fingerabdruck des reinen Dokumenteninhalts (ohne Frontmatter)."""
+    """Fingerprint of the document content alone (without frontmatter)."""
     return hashlib.md5(text.encode("utf-8")).hexdigest()
 
 
 def is_summarizable_path(filepath: Path) -> bool:
-    """Filtert Systemdateien (versteckte/Index-/Sync-Konflikt-Dateien) heraus,
-    die nie eigenständig zusammengefasst werden sollen."""
+    """Filters out system files (hidden, index and sync-conflict files) that should
+    never be summarized in their own right."""
     name = filepath.name
     if filepath.suffix != ".md":
         return False
@@ -40,8 +40,8 @@ def is_summarizable_path(filepath: Path) -> bool:
 
 
 def build_note_index(vault_root: Path) -> dict[str, str]:
-    """Baut eine Zuordnung Notiz-Name -> relativer Pfad für den gesamten Vault,
-    damit Wikilink-Ziele auf echte Dateien aufgelöst werden können."""
+    """Builds a mapping of note name -> relative path for the entire vault, so that
+    wikilink targets can be resolved to real files."""
     index: dict[str, str] = {}
     for md_file in vault_root.rglob("*.md"):
         if not is_summarizable_path(md_file):
@@ -51,8 +51,8 @@ def build_note_index(vault_root: Path) -> dict[str, str]:
 
 
 def extract_linked_files(vault_root: Path, text: str) -> list[str]:
-    """Extrahiert alle Obsidian-Wikilinks ([[Ziel]], [[Ziel|Text]], [[Ziel#Abschnitt]])
-    aus dem Inhalt und löst sie, wo möglich, auf die tatsächliche Datei im Vault auf."""
+    """Extracts all Obsidian wikilinks ([[target]], [[target|text]], [[target#section]])
+    from the content and resolves them, where possible, to the actual file in the vault."""
     note_index = build_note_index(vault_root)
     linked_files = []
     seen = set()
@@ -68,32 +68,32 @@ def extract_linked_files(vault_root: Path, text: str) -> list[str]:
 
 
 def build_file_map_content(vault_root: Path, folder_path: Path, ai_map: dict) -> str:
-    """Baut eine kleine Markdown-Liste aller Dateien in diesem Ordner (eine Zeile
-    pro Datei) mit deren jeweils aktuell in der .ai_map.json hinterlegter Zusammenfassung."""
+    """Builds a small Markdown list of all files in this folder (one line per file)
+    with the summary currently stored for each in .ai_map.json."""
     files_map = ai_map.get("files", {})
     lines = []
     for entry in sorted(folder_path.iterdir(), key=lambda p: p.name.lower()):
         if not is_summarizable_path(entry):
             continue
         rel_path = entry.relative_to(vault_root).as_posix()
-        summary = files_map.get(rel_path, "Zusammenfassung ausstehend...")
+        summary = files_map.get(rel_path, PENDING_SUMMARY_TEXT)
         lines.append(f"- **{entry.name}** — {summary}")
 
     if not lines:
         return ""
 
-    return "## 📂 Dateien in diesem Ordner\n\n" + "\n".join(lines)
+    return "## 📂 Files in this folder\n\n" + "\n".join(lines)
 
 
 class ObsidianVaultManager:
-    """Kapselt die Lese- und Schreibzugriffe auf den Obsidian Vault."""
+    """Encapsulates read and write access to the Obsidian vault."""
 
     def __init__(self, vault_root: Path):
         self.vault_root = vault_root
         self.ai_map_path = vault_root / ".ai_map.json"
 
     def _read_md_file(self, filepath: Path) -> tuple[dict, str]:
-        """Liest eine Markdown-Datei und trennt Frontmatter und Inhalt."""
+        """Reads a Markdown file and separates frontmatter from content."""
         if not filepath.exists():
             return {}, ""
 
@@ -107,13 +107,13 @@ class ObsidianVaultManager:
                 text = match.group(2).strip()
                 return frontmatter, text
             except yaml.YAMLError as e:
-                logger.error(f"YAML Parse-Fehler in {filepath}: {e}")
+                logger.error(f"YAML parse error in {filepath}: {e}")
                 return {}, content
         return {}, content.strip()
 
     def _write_md_file(self, filepath: Path, frontmatter: dict, content: str):
-        """Schreibt Frontmatter und Inhalt sauber im Obsidian-Format zurück."""
-        # 'sort_keys=False' behält die Reihenfolge der Keys bei
+        """Writes frontmatter and content back cleanly in Obsidian format."""
+        # 'sort_keys=False' preserves the order of the keys
         fm_yaml = yaml.dump(frontmatter, allow_unicode=True, default_flow_style=False, sort_keys=False)
         new_content = f"---\n{fm_yaml}---\n{content}\n"
 
@@ -121,12 +121,12 @@ class ObsidianVaultManager:
             f.write(new_content)
 
     def get_document_data(self, filepath: Path) -> tuple[str, str]:
-        """Gibt (Zusammenfassung, reiner_text) des Dokuments zurück."""
+        """Returns (summary, plain_text) of the document."""
         fm, text = self._read_md_file(filepath)
-        return fm.get("ai_summary", "Zusammenfassung ausstehend..."), text
+        return fm.get("ai_summary", PENDING_SUMMARY_TEXT), text
 
     def get_subfolder_summaries(self, folder_path: Path) -> str:
-        """Sammelt die ai_summary aus der .index.md jedes direkten Unterordners von folder_path."""
+        """Collects the ai_summary from the .index.md of every direct subfolder of folder_path."""
         lines = []
         for entry in sorted(folder_path.iterdir(), key=lambda p: p.name.lower()):
             if not entry.is_dir():
@@ -134,33 +134,33 @@ class ObsidianVaultManager:
             index_fm, _ = self._read_md_file(entry / ".index.md")
             if not index_fm:
                 continue
-            summary = index_fm.get("ai_summary", "Zusammenfassung ausstehend...")
+            summary = index_fm.get("ai_summary", PENDING_SUMMARY_TEXT)
             lines.append(f"- **{entry.name}/** — {summary}")
         return "\n".join(lines)
 
     def has_content_changed(self, filepath: Path) -> bool:
-        """Vergleicht den aktuellen Dokumenteninhalt mit dem zuletzt verarbeiteten Stand.
-        Erkennt insbesondere das eigene Zurückschreiben der Zusammenfassung (Frontmatter
-        ändert sich, der Inhalt selbst aber nicht) und meldet dafür False."""
+        """Compares the current document content with the last processed state. In
+        particular it recognizes our own writing-back of the summary (the frontmatter
+        changes but the content itself does not) and reports False for that."""
         fm, text = self._read_md_file(filepath)
         return get_content_hash(text) != fm.get("content_hash")
 
     def get_filemap_summary(self, relative_path: str) -> str:
-        """Liest die Zusammenfassung aus der zentralen .ai_map.json."""
+        """Reads the summary from the central .ai_map.json."""
         if not self.ai_map_path.exists():
-            return "Zusammenfassung ausstehend..."
+            return PENDING_SUMMARY_TEXT
 
         with open(self.ai_map_path, "r", encoding="utf-8") as f:
             ai_map = json.load(f)
 
-        return ai_map.get("files", {}).get(relative_path, "Zusammenfassung ausstehend...")
+        return ai_map.get("files", {}).get(relative_path, PENDING_SUMMARY_TEXT)
 
     def update_vault_data(self, filepath: Path, result: dict):
-        """Aktualisiert Dokumenten-Frontmatter und die zentrale .ai_map.json (Datei-Eintrag)
-        basierend auf dem Ergebnis des Summarizer-Agenten. Die Ordner-Ebene (.index.md,
-        .ai_map.json-Verzeichniseintrag) wird separat über update_folder_data() gepflegt."""
+        """Updates the document frontmatter and the central .ai_map.json (file entry)
+        based on the summarizer agent's result. The folder level (.index.md and the
+        .ai_map.json directory entry) is maintained separately via update_folder_data()."""
 
-        # 1. Dokumenten-Frontmatter aktualisieren
+        # 1. Update the document frontmatter
         fm, text = self._read_md_file(filepath)
         fm["ai_summary"] = result.get("document_summary")
         fm["content_hash"] = get_content_hash(text)
@@ -168,7 +168,7 @@ class ObsidianVaultManager:
         fm["last_modified"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self._write_md_file(filepath, fm, text)
 
-        # 2. Zentrale .ai_map.json aktualisieren (Datei-Eintrag)
+        # 2. Update the central .ai_map.json (file entry)
         if self.ai_map_path.exists():
             with open(self.ai_map_path, "r", encoding="utf-8") as f:
                 ai_map = json.load(f)
@@ -185,8 +185,8 @@ class ObsidianVaultManager:
             json.dump(ai_map, f, indent=2, ensure_ascii=False)
 
     def build_folder_summary_input(self, folder_path: Path) -> dict:
-        """Baut die Eingabedaten für den FolderSummarizer-Agenten: aktuelle Datei-Map,
-        Unterordner-Zusammenfassungen sowie die bisherigen Zusammenfassungen dieses Ordners."""
+        """Builds the input data for the FolderSummarizer agent: the current file map,
+        the subfolder summaries and this folder's existing summaries."""
         if self.ai_map_path.exists():
             with open(self.ai_map_path, "r", encoding="utf-8") as f:
                 ai_map = json.load(f)
@@ -199,13 +199,13 @@ class ObsidianVaultManager:
         return {
             "files_overview": build_file_map_content(self.vault_root, folder_path, ai_map),
             "subfolder_summaries": self.get_subfolder_summaries(folder_path),
-            "prev_folder_summary": index_fm.get("ai_summary", "Zusammenfassung ausstehend..."),
-            "prev_dirmap_summary": ai_map.get("directories", {}).get(rel_dir, "Zusammenfassung ausstehend..."),
+            "prev_folder_summary": index_fm.get("ai_summary", PENDING_SUMMARY_TEXT),
+            "prev_dirmap_summary": ai_map.get("directories", {}).get(rel_dir, PENDING_SUMMARY_TEXT),
         }
 
     def update_folder_data(self, folder_path: Path, result: dict):
-        """Aktualisiert .index.md (Frontmatter + Datei-Map) und den Verzeichnis-Eintrag
-        in der .ai_map.json basierend auf dem Ergebnis des FolderSummarizer-Agenten."""
+        """Updates .index.md (frontmatter + file map) and the directory entry
+        in .ai_map.json, based on the FolderSummarizer agent's result."""
         if self.ai_map_path.exists():
             with open(self.ai_map_path, "r", encoding="utf-8") as f:
                 ai_map = json.load(f)
@@ -233,12 +233,12 @@ class ObsidianVaultManager:
         self._write_md_file(index_path, index_fm, file_map_content)
 
     def refresh_file_map(self, folder_path: Path):
-        """Baut die Datei-Map im Inhalt einer .index.md aus dem aktuellen Stand
-        von .ai_map.json neu auf, ohne die Zusammenfassung (Frontmatter) anzufassen.
-        Wird von der periodischen Wartung genutzt, damit gelöschte Dateien
-        sofort aus der Map verschwinden. Schreibt die Datei NUR, wenn sich die Map
-        inhaltlich tatsächlich geändert hat (sonst würde jeder Wartungslauf jede
-        .index.md im Vault unnötig neu schreiben und einen Watchdog-Event auslösen)."""
+        """Rebuilds the file map in the body of an .index.md from the current state of
+        .ai_map.json, without touching the summary (frontmatter). Used by the periodic
+        maintenance pass so that deleted files disappear from the map immediately.
+        Writes the file ONLY if the map actually changed (otherwise every maintenance
+        run would needlessly rewrite every .index.md in the vault and trigger a
+        watchdog event)."""
         index_path = folder_path / ".index.md"
         if not index_path.exists():
             return
@@ -257,55 +257,53 @@ class ObsidianVaultManager:
 
 def process_obsidian_file(vault_root: Path, filepath: Path) -> bool:
     """
-    Die Hauptfunktion, die vom Watchdog aufgerufen wird.
+    The main function called by the watchdog.
 
-    Gibt zurück, ob sich dadurch die Zusammenfassung des direkten Elternordners
-    geändert hat (Grundlage für eine mögliche Kaskade weiter nach oben, siehe
-    FolderSummaryScheduler in scheduler.py).
+    Returns whether this changed the summary of the direct parent folder (the basis for
+    a possible cascade further up, see FolderSummaryScheduler in scheduler.py).
     """
     manager = ObsidianVaultManager(vault_root)
 
-    # Pfad für die Map muss POSIX-Standard (Slashes) nutzen
+    # The path for the map must use POSIX notation (forward slashes)
     rel_path_str = filepath.relative_to(vault_root).as_posix()
 
     # 1. Daten zusammenziehen
     prev_doc_summary, current_content = manager.get_document_data(filepath)
     prev_filemap_summary = manager.get_filemap_summary(rel_path_str)
 
-    # 2. Input bauen (previous_content lassen wir leer oder übergeben die alte summary)
+    # 2. Build the input (previous_content is left empty, or carries the old summary)
     input_data = {
         "current_content": current_content,
-        "previous_content": "", # Nicht mehr auf Dateisystem-Ebene verfügbar
+        "previous_content": "", # No longer available at the filesystem level
         "prev_doc_summary": prev_doc_summary,
         "prev_filemap_summary": prev_filemap_summary,
     }
 
-    logger.info(f"[{filepath.name}] Baue Summaries auf Basis von Obsidian-Daten...")
+    logger.info(f"[{filepath.name}] Building summaries from the Obsidian data...")
 
-    # 3. Agent ausführen
+    # 3. Run the agent
     from src.agentic import SummarizerAgent, run_agent_session
     session = run_agent_session(agent=SummarizerAgent, raw_input=input_data)
 
     # 4. Speichern
     if session.is_successful:
         manager.update_vault_data(filepath, session.final_result.model_dump())
-        logger.info(f"[{filepath.name}] YAML und .ai_map.json (Datei-Eintrag) aktualisiert!")
-        # Die Datei-Zusammenfassung hat sich geändert -> Ordner-Zusammenfassung neu erzeugen lassen.
+        logger.info(f"[{filepath.name}] YAML and .ai_map.json (file entry) updated.")
+        # The file summary changed -> have the folder summary regenerated.
         return process_folder_summary(vault_root, filepath.parent)
 
-    logger.error(f"[{filepath.name}] Agent Fehler. Vault wurde nicht verändert.")
+    logger.error(f"[{filepath.name}] Agent error. The vault was not modified.")
     return False
 
 
 def process_folder_summary(vault_root: Path, folder_path: Path) -> bool:
     """
-    Wird aufgerufen, nachdem sich die Zusammenfassung einer Datei/eines Unterordners
-    in folder_path geändert hat. Ruft den FolderSummarizer-Agenten auf, um die
-    .index.md (ausführliche Zusammenfassung) und den Kurz-Eintrag dieses Ordners in
-    der .ai_map.json zu aktualisieren.
+    Called after the summary of a file or subfolder inside folder_path has changed.
+    Invokes the FolderSummarizer agent to update the .index.md (the detailed summary)
+    and this folder's short entry in the .ai_map.json.
 
-    Gibt zurück, ob sich folder_summary oder dirmap_summary dadurch tatsächlich
-    geändert haben (Grundlage für eine Kaskade zum übergeordneten Ordner).
+    Returns whether folder_summary or dirmap_summary actually changed as a result (the
+    basis for a cascade to the parent folder).
     """
     manager = ObsidianVaultManager(vault_root)
     rel_dir = folder_path.relative_to(vault_root).as_posix()
@@ -313,13 +311,13 @@ def process_folder_summary(vault_root: Path, folder_path: Path) -> bool:
 
     input_data = manager.build_folder_summary_input(folder_path)
 
-    logger.info(f"[{dir_label}] Baue Ordner-Zusammenfassung...")
+    logger.info(f"[{dir_label}] Building folder summary...")
 
     from src.agentic import FolderSummarizerAgent, run_agent_session
     session = run_agent_session(agent=FolderSummarizerAgent, raw_input=input_data)
 
     if not session.is_successful:
-        logger.error(f"[{dir_label}] FolderSummarizer-Agent Fehler. Ordner-Zusammenfassung nicht verändert.")
+        logger.error(f"[{dir_label}] FolderSummarizer agent error. Folder summary not modified.")
         return False
 
     result = session.final_result.model_dump()
@@ -328,32 +326,32 @@ def process_folder_summary(vault_root: Path, folder_path: Path) -> bool:
         or result.get("dirmap_summary") != input_data.get("prev_dirmap_summary")
     )
     manager.update_folder_data(folder_path, result)
-    logger.info(f"[{dir_label}] .index.md und .ai_map.json (Ordner-Eintrag) aktualisiert!")
+    logger.info(f"[{dir_label}] .index.md and .ai_map.json (folder entry) updated.")
     return changed
 
 
 def register_pending_file(filepath: Path, vault_root: Path) -> bool:
-    """Tragt eine gerade erstellte Notiz SOFORT in die .ai_map.json ein - mit
-    Platzhalter-Zusammenfassung (PENDING_SUMMARY_TEXT) - und baut die Datei-Map in der
-    .index.md des uebergeordneten Ordners neu auf, damit die neue Datei dort unmittelbar
-    auftaucht, statt erst beim naechsten Wartungslauf.
+    """Registers a just-created note in .ai_map.json IMMEDIATELY - with a placeholder
+    summary (PENDING_SUMMARY_TEXT) - and rebuilds the file map in the parent folder's
+    .index.md, so the new file shows up there right away instead of only at the next
+    maintenance run.
 
-    Die echte Zusammenfassung erzeugt diese Funktion NICHT: Sie ruft keinen Agenten auf.
-    Der Platzhalter ist das Signal, an dem map_maintenance die Zusammenfassung einplant.
+    This function does NOT produce the real summary: it calls no agent. The placeholder
+    is the signal map_maintenance uses to schedule the summary.
 
-    Gibt True zurueck, wenn ein Eintrag geschrieben wurde.
+    Returns True if an entry was written.
     """
     root = Path(vault_root).resolve()
     target = Path(filepath).resolve()
 
-    # Systemdateien (.index.md, .ai_map.json, _-Praefix ...) gehoeren nicht in die Map.
+    # System files (.index.md, .ai_map.json, _-prefixed ...) do not belong in the map.
     if not is_summarizable_path(target):
         return False
 
     try:
         rel_path = target.relative_to(root).as_posix()
     except ValueError:
-        logger.warning(f"[Map] Datei liegt ausserhalb des Vaults, kein AI-Map-Eintrag: {target}")
+        logger.warning(f"[Map] File lies outside the vault, no AI map entry: {target}")
         return False
 
     ai_map_path = root / ".ai_map.json"
@@ -364,23 +362,23 @@ def register_pending_file(filepath: Path, vault_root: Path) -> bool:
 
     with open(ai_map_path, "w", encoding="utf-8") as f:
         json.dump(ai_map, f, indent=2, ensure_ascii=False)
-    logger.info(f"[Map] Neue Datei in AI-Map vorgemerkt: {rel_path}")
+    logger.info(f"[Map] New file registered in the AI map: {rel_path}")
 
-    # Datei-Map der .index.md im Ordner neu aufbauen; schreibt nur bei echter Aenderung.
+    # Rebuild the file map in the folder's .index.md; only writes on a real change.
     ObsidianVaultManager(root).refresh_file_map(target.parent)
     return True
 
 
 def _load_ai_map(ai_map_path: Path) -> dict:
-    """Liest die .ai_map.json tolerant ein: fehlt sie oder ist sie beschaedigt, kommt
-    eine frische, leere Struktur zurueck."""
+    """Reads .ai_map.json tolerantly: if it is missing or corrupted, a fresh, empty
+    structure is returned."""
     ai_map = {}
     if ai_map_path.exists():
         try:
             with open(ai_map_path, "r", encoding="utf-8") as f:
                 ai_map = json.load(f)
         except (json.JSONDecodeError, OSError) as e:
-            logger.error(f"[Map] .ai_map.json nicht lesbar, wird neu aufgebaut: {e}")
+            logger.error(f"[Map] .ai_map.json not readable, rebuilding it: {e}")
             ai_map = {}
     if not isinstance(ai_map, dict):
         ai_map = {}
@@ -390,8 +388,8 @@ def _load_ai_map(ai_map_path: Path) -> dict:
 
 
 def _register_parent_dirs(ai_map: dict, target: Path, root: Path) -> None:
-    """Merkt alle uebergeordneten Ordner bis zum Vault-Root vor, ohne bereits
-    vorhandene Ordner-Zusammenfassungen zu ueberschreiben."""
+    """Registers all parent folders up to the vault root, without overwriting folder
+    summaries that already exist."""
     for parent in target.parents:
         if parent == root:
             break
@@ -399,15 +397,15 @@ def _register_parent_dirs(ai_map: dict, target: Path, root: Path) -> None:
 
 
 def move_map_entry(old_path: Path, new_path: Path, vault_root: Path) -> bool:
-    """Zieht den .ai_map.json-Eintrag einer verschobenen/umbenannten Notiz mit um:
-    Der alte Schluessel verschwindet, der neue erhaelt die BISHERIGE Zusammenfassung
-    (keine Neu-Generierung – der Inhalt hat sich beim Verschieben nicht geaendert).
-    Fehlte der alte Eintrag, wird der neue als ausstehend vorgemerkt.
+    """Moves the .ai_map.json entry of a moved/renamed note along with it: the old key
+    disappears and the new one inherits the EXISTING summary (no regeneration - the
+    content did not change during the move). If the old entry was missing, the new one
+    is registered as pending.
 
-    Danach werden die Datei-Maps der .index.md in Quell- UND Zielordner neu gebaut,
-    damit die Notiz dort nicht doppelt bzw. gar nicht auftaucht.
+    Afterwards the file maps of the .index.md in BOTH the source and destination folder
+    are rebuilt, so the note does not appear twice or not at all.
 
-    Gibt True zurueck, wenn ein Eintrag geschrieben wurde.
+    Returns True if an entry was written.
     """
     root = Path(vault_root).resolve()
     source = Path(old_path)
@@ -418,10 +416,10 @@ def move_map_entry(old_path: Path, new_path: Path, vault_root: Path) -> bool:
 
     try:
         rel_new = target.relative_to(root).as_posix()
-        # Die Quelle existiert nicht mehr; resolve() ohne strict ist hier korrekt.
+        # The source no longer exists; resolve() without strict is correct here.
         rel_old = source.resolve().relative_to(root).as_posix()
     except ValueError:
-        logger.warning(f"[Map] Verschiebung ausserhalb des Vaults, kein AI-Map-Eintrag: {source} -> {target}")
+        logger.warning(f"[Map] Move outside the vault, no AI map entry: {source} -> {target}")
         return False
 
     ai_map_path = root / ".ai_map.json"
@@ -433,7 +431,7 @@ def move_map_entry(old_path: Path, new_path: Path, vault_root: Path) -> bool:
 
     with open(ai_map_path, "w", encoding="utf-8") as f:
         json.dump(ai_map, f, indent=2, ensure_ascii=False)
-    logger.info(f"[Map] AI-Map-Eintrag verschoben: {rel_old} -> {rel_new}")
+    logger.info(f"[Map] AI map entry moved: {rel_old} -> {rel_new}")
 
     manager = ObsidianVaultManager(root)
     for folder in {source.parent, target.parent}:
@@ -443,26 +441,26 @@ def move_map_entry(old_path: Path, new_path: Path, vault_root: Path) -> bool:
 
 
 def register_pending_directory(dirpath: Path, vault_root: Path) -> bool:
-    """Traegt einen neu erstellten Ordner SOFORT in die .ai_map.json ein, damit er in
-    format_ai_map() auftaucht - sonst koennte ein Agent einen Ordner anlegen, den er
-    danach selbst nicht sieht. Bereits vorhandene Ordner-Zusammenfassungen bleiben
-    unberuehrt; die echte Zusammenfassung erzeugt spaeter die Folder-Summary-Pipeline.
+    """Registers a newly created folder in .ai_map.json IMMEDIATELY, so it shows up in
+    format_ai_map() - otherwise an agent could create a folder it then cannot see
+    itself. Folder summaries that already exist are left untouched; the real summary is
+    produced later by the folder-summary pipeline.
 
-    Gibt True zurueck, wenn ein neuer Eintrag entstanden ist.
+    Returns True if a new entry was created.
     """
     root = Path(vault_root).resolve()
     target = Path(dirpath).resolve()
 
     if target == root or not target.is_dir():
         return False
-    # Versteckte / technische Ordner (.git, .obsidian ...) gehoeren nicht in die Map.
+    # Hidden / technical folders (.git, .obsidian ...) do not belong in the map.
     if any(part.startswith(".") or part.startswith("_") for part in target.parts[len(root.parts):]):
         return False
 
     try:
         rel_dir = target.relative_to(root).as_posix()
     except ValueError:
-        logger.warning(f"[Map] Ordner liegt ausserhalb des Vaults, kein AI-Map-Eintrag: {target}")
+        logger.warning(f"[Map] Folder lies outside the vault, no AI map entry: {target}")
         return False
 
     ai_map_path = root / ".ai_map.json"
@@ -476,21 +474,19 @@ def register_pending_directory(dirpath: Path, vault_root: Path) -> bool:
 
     with open(ai_map_path, "w", encoding="utf-8") as f:
         json.dump(ai_map, f, indent=2, ensure_ascii=False)
-    logger.info(f"[Map] Neuer Ordner in AI-Map vorgemerkt: {rel_dir}")
+    logger.info(f"[Map] New folder registered in the AI map: {rel_dir}")
     return True
 
 
 def remove_map_entry(path: Path, vault_root: Path) -> bool:
-    """Entfernt den .ai_map.json-Eintrag einer geloeschten Notiz bzw. eines geloeschten
-    Ordners - samt ALLER Eintraege darunter, denn mit einem Ordner verschwindet sein
-    gesamter Inhalt.
+    """Removes the .ai_map.json entry of a deleted note or folder - including ALL
+    entries beneath it, since deleting a folder removes all of its content.
 
-    Der Pfad existiert zum Aufrufzeitpunkt nicht mehr, deshalb laesst sich Datei und
-    Ordner nicht mehr unterscheiden: Es werden schlicht alle Schluessel entfernt, die
-    exakt passen oder unterhalb des Pfads liegen. Fuer eine Datei trifft das genau
-    einen Schluessel.
+    The path no longer exists by the time this is called, so a file can no longer be
+    distinguished from a folder: every key that matches exactly or lies below the path
+    is simply removed. For a file that is exactly one key.
 
-    Gibt True zurueck, wenn mindestens ein Eintrag entfernt wurde.
+    Returns True if at least one entry was removed.
     """
     root = Path(vault_root).resolve()
     target = Path(path)
@@ -519,9 +515,9 @@ def remove_map_entry(path: Path, vault_root: Path) -> bool:
 
     with open(ai_map_path, "w", encoding="utf-8") as f:
         json.dump(ai_map, f, indent=2, ensure_ascii=False)
-    logger.info(f"[Map] {len(removed)} AI-Map-Eintrag/-Eintraege entfernt fuer: {rel}")
+    logger.info(f"[Map] Removed {len(removed)} AI map entry/entries for: {rel}")
 
-    # Datei-Map im uebergeordneten Ordner neu bauen, damit der Eintrag dort verschwindet.
+    # Rebuild the file map in the parent folder, so the entry disappears there too.
     parent = target.parent
     if parent.is_dir():
         ObsidianVaultManager(root).refresh_file_map(parent)

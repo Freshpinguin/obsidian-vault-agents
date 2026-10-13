@@ -1,18 +1,20 @@
 {
   "directories": {
-    "Technologie": "Technische Grundlagen der Antriebstechnik",
-    "Kulturen": "Biologie und Kultur außerirdischer Völker"
+    "Meetings": "Meeting notes, decision log and stakeholder map.",
+    "Architecture": "Pipeline design, decision records and deployment notes."
   },
   "files": {
-    "Grundannahmen.md": "Grundlegende physikalische Regeln, Kausalität und Zeitverlauf der Welt.",
-    "Technologie/Antriebe.md": "Beschreibung der Apiden-FTL-Technik (Resonanz-Imkerantrieb) und Verweis auf [[Grundannahmen]].",
-    "Technologie/Gasgeborene.md": "Technologische Übersicht der Gasgeborenen: Schwebetechnologien, Druckwellen-Kommunikation und Druckblasen.",
-    "Kulturen/Apiden.md": "Biologie, Kommunikation und Kultur des Insektenoidvolkes der Apiden.",
-    "Kulturen/Gasgeborene.md": "Biologie, Kommunikation und Schwarmintelligenz der gasförmigen Entitäten 'Die Ätherischen'.",
-    "Kulturen/Antipiden.md": "Leeres Dokument ohne Inhalt.",
-    "Kulturen/Leonide.md": "Zusammenfassung ausstehend...",
-    "Kulturen/Xylanthi.md": "Zusammenfassung ausstehend...",
-    "Kulturen/Beispielvolk.md": "Informationen zur Kultur und Gesellschaft des Beispielvolks.",
-    "Technologie/Gewachsenerechner.md": "Zusammenfassung ausstehend..."
+    "Overview.md": "Atlas project overview: goals, scope, milestones and success metrics.",
+    "Meetings/Kickoff.md": "Kickoff meeting: problem statement, agreed goals and first data source.",
+    "Meetings/Weekly-Sync.md": "Format and running log of the weekly sync, most recent weeks first.",
+    "Meetings/Decisions.md": "Running log of decisions taken in meetings, with rationale.",
+    "Meetings/Stakeholders.md": "Who signs off on what, and how often each group expects an update.",
+    "Meetings/Planning.md": "Summary pending...",
+    "Meetings/Retro.md": "Summary pending...",
+    "Architecture/Data-Pipeline.md": "Four-stage daily batch ingestion pipeline and its failure behaviour.",
+    "Architecture/Decisions.md": "Architecture decision records: schema, batch vs streaming, transforms.",
+    "Architecture/Deployment.md": "Deployment process notes, infrastructure components, and identified gaps for pipeline jobs.",
+    "Architecture-Decisions-Copy.md": "Summary pending...",
+    "Architecture/Alternative-Streaming.md": "Summary pending..."
   }
 }

@@ -9,7 +9,7 @@ class AgentStatus(StrEnum):
     TOOL_CALL = "tool_call"
 
 class ParseResult(BaseModel):
-    """Kapselt das Ergebnis des Parsings."""
+    """Encapsulates the result of parsing."""
     status: AgentStatus
     parsed_data: BaseModel | None = None
     error_report: str | None = None

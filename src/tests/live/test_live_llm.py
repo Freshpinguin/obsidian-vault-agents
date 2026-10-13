@@ -15,8 +15,8 @@ pytestmark = [
 
 
 def test_live_chat_create_file(vault: Path):
-    session = start_wiki_chat("Erstelle bitte eine Datei unter Kulturen/LiveTest.md mit dem Inhalt: Live-Test erfolgreich.")
+    session = start_wiki_chat("Erstelle bitte eine Datei unter Meetings/LiveTest.md mit dem Inhalt: Live-Test erfolgreich.")
     assert session.is_successful
-    target = vault / "Kulturen" / "LiveTest.md"
+    target = vault / "Meetings" / "LiveTest.md"
     assert target.exists()
     assert "Live-Test erfolgreich" in target.read_text(encoding="utf-8")

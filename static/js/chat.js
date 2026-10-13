@@ -16,7 +16,7 @@ import {
 } from "./dom.js";
 
 // ==========================================
-// 7. Chat-Funktionalität
+// 7. Chat functionality
 // ==========================================
 export function addChatMessage(role, text) {
   const item = document.createElement("div");
@@ -64,7 +64,7 @@ export async function sendChatMessage(text) {
   thinkingEl.innerHTML = `
     <div class="thinking-indicator">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <span class="thinking-text">Chat-Assistent überlegt…</span>
+      <span class="thinking-text">Chat assistant is thinking…</span>
       <div class="thinking-dots">
         <div class="thinking-dot"></div>
         <div class="thinking-dot"></div>
@@ -97,10 +97,10 @@ export async function sendChatMessage(text) {
     state.sessionId = data.session_id;
     addChatMessage("assistant", data.reply);
 
-    // Dateibaum sofort nach der Antwort des Agenten aktualisieren
+    // Refresh the file tree immediately after the agent responds
     await loadFileTree();
 
-    // Falls Mutationen stattfanden: Ordner expandieren, Datei öffnen und Toast anzeigen
+    // If mutations happened: expand the folder, open the file and show a toast
     if (data.mutations && data.mutations.length > 0) {
       for (const m of data.mutations) {
         if (m.path && (m.tool === "create_file" || m.tool === "edit_file")) {
@@ -110,7 +110,7 @@ export async function sendChatMessage(text) {
           }
           renderTree(explorerSearchInput ? explorerSearchInput.value : "");
           await loadFileContent(m.path);
-          showToast(`Vault: ${m.path} aktualisiert`, "success");
+          showToast(`Vault: ${m.path} updated`, "success");
         } else if (m.tool === "move_file") {
           if (m.path) {
             const parts = m.path.split("/");
@@ -120,20 +120,20 @@ export async function sendChatMessage(text) {
             renderTree(explorerSearchInput ? explorerSearchInput.value : "");
             await loadFileContent(m.path);
           }
-          showToast(`Vault: ${m.path} verschoben`, "success");
+          showToast(`Vault: ${m.path} moved`, "success");
         } else if (m.tool === "delete_file") {
           if (state.currentFile === m.path) {
             state.currentFile = null;
             emptyStateEl.style.display = "flex";
             fileContainerEl.style.display = "none";
           }
-          showToast(`Vault: ${m.path} gelöscht`, "info");
+          showToast(`Vault: ${m.path} deleted`, "info");
         } else if (m.tool === "create_directory") {
           if (m.path) {
             state.expandedFolders.add(m.path);
             renderTree(explorerSearchInput ? explorerSearchInput.value : "");
           }
-          showToast(`Ordner erstellt: ${m.path}`, "success");
+          showToast(`Folder created: ${m.path}`, "success");
         }
       }
     }
@@ -141,7 +141,7 @@ export async function sendChatMessage(text) {
   } catch (err) {
     thinkingEl.remove();
     if (err.status === 404) {
-      addChatMessage("error", "Diese Session ist abgelaufen. Bitte starte einen neuen Chat.");
+      addChatMessage("error", "This session has expired. Please start a new chat.");
       state.sessionId = null;
       return;
     }

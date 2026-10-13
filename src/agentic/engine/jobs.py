@@ -1,5 +1,5 @@
 # src/agentic/engine/jobs.py
-"""Hintergrund-Ausführung und Job-Registry für asynchrone Agenten-Sessions."""
+"""Background execution and job registry for asynchronous agent sessions."""
 from dataclasses import dataclass, field
 from datetime import datetime
 import threading
@@ -33,7 +33,7 @@ _jobs_lock = threading.Lock()
 
 def _format_plan(steps: list[dict]) -> str:
     if not steps:
-        return "(noch kein Plan erstellt)"
+        return "(no plan created yet)"
     markers = {"pending": "[ ]", "in_progress": "[~]", "done": "[x]"}
     return "\n".join(f"{markers.get(s.get('status'), '[ ]')} {s.get('step', '')}" for s in steps)
 
@@ -42,15 +42,15 @@ def _update_plan(task_id: str, steps: list[dict]) -> str:
     with _jobs_lock:
         job = _jobs.get(task_id)
     if job is None:
-        return f"Fehler: Unbekannte task_id '{task_id}'."
+        return f"Error: unknown task_id '{task_id}'."
 
     job.plan = steps
-    logger.info(f"[TaskAgent] Plan für {task_id} aktualisiert ({len(steps)} Schritte).")
-    return "Plan gespeichert:\n" + _format_plan(steps)
+    logger.info(f"[TaskAgent] Plan for {task_id} updated ({len(steps)} steps).")
+    return "Plan saved:\n" + _format_plan(steps)
 
 
 def _run_job(job: TaskJob, model_override: LLMModels | None) -> None:
-    # bewusst lokal: bricht den Zyklus engine -> agents -> tools -> engine
+    # Deliberately local: breaks the cycle engine -> agents -> tools -> engine
     from src.agentic.agents.task_agent import TaskAgent, build_task_input
 
     try:
@@ -59,24 +59,24 @@ def _run_job(job: TaskJob, model_override: LLMModels | None) -> None:
         job.session = session
         job.status = "done" if session.is_successful else "error"
         if not session.is_successful:
-            job.error = "Der Task-Agent konnte die Aufgabe nicht abschließen (Iterationslimit oder wiederholt ungültige Antwort)."
+            job.error = "The task agent could not complete the assignment (iteration limit or repeatedly invalid response)."
     except Exception as e:
-        logger.error(f"[TaskAgent] Hintergrund-Aufgabe {job.task_id} fehlgeschlagen: {e}")
+        logger.error(f"[TaskAgent] Background task {job.task_id} failed: {e}")
         job.status = "error"
         job.error = str(e)
     finally:
         job.finished_at = datetime.now()
-        logger.info(f"[TaskAgent] Hintergrund-Aufgabe {job.task_id} beendet: {job.status}")
+        logger.info(f"[TaskAgent] Background task {job.task_id} finished: {job.status}")
 
 
 def start_background_task(description: str, model_override: LLMModels | None = None) -> str:
-    """Startet den Task-Agenten für eine Aufgabe in einem eigenen Hintergrund-Thread und
-    gibt SOFORT eine Bestätigung mit task_id zurück (blockiert nicht). Der Fortschritt
-    lässt sich über check_task_status(task_id) abfragen. Ohne explizites model_override
-    wechselt jeder Aufruf abwechselnd zwischen GEMINI_3_5_FLASH_LITE und
-    GEMINI_3_1_FLASH_LITE, um das Tokens/Minute-Limit der Free-Tier-API auf zwei
-    Modelle zu verteilen (die gesamte Aufgabe läuft dann durchgängig mit dem gewählten
-    Modell, die Rotation greift pro Hintergrund-Aufgabe, nicht pro Runde)."""
+    """Starts the task agent for an assignment in its own background thread and returns
+    a confirmation with the task_id IMMEDIATELY (does not block). Progress can be
+    queried via check_task_status(task_id). Without an explicit model_override, calls
+    alternate between GEMINI_3_5_FLASH_LITE and GEMINI_3_1_FLASH_LITE to spread the
+    free-tier tokens-per-minute limit across two models (the whole assignment then runs
+    on the chosen model throughout; rotation applies per background task, not per
+    round)."""
     job = TaskJob(task_id=uuid.uuid4().hex[:12], description=description)
     with _jobs_lock:
         _jobs[job.task_id] = job
@@ -85,34 +85,34 @@ def start_background_task(description: str, model_override: LLMModels | None = N
     thread = threading.Thread(target=_run_job, args=(job, use_model), daemon=True)
     thread.start()
 
-    logger.info(f"[TaskAgent] Hintergrund-Aufgabe {job.task_id} gestartet: {description[:100]}")
+    logger.info(f"[TaskAgent] Background task {job.task_id} started: {description[:100]}")
     return (
-        f"Hintergrund-Aufgabe gestartet (task_id: {job.task_id}). "
-        f"Läuft im Hintergrund weiter – Fortschritt mit check_task_status('{job.task_id}') abfragen."
+        f"Background task started (task_id: {job.task_id}). "
+        f"It keeps running in the background - query progress with check_task_status('{job.task_id}')."
     )
 
 
 def check_task_status(task_id: str) -> str:
-    """Gibt Status, aktuellen Plan und (falls fertig) den Abschlussbericht einer per
-    start_background_task gestarteten Aufgabe zurück."""
+    """Returns the status, current plan and (once finished) the final report of an
+    assignment started via start_background_task."""
     with _jobs_lock:
         job = _jobs.get(task_id)
 
     if job is None:
-        return f"Fehler: Keine Hintergrund-Aufgabe mit der ID '{task_id}' gefunden."
+        return f"Error: no background task found with the ID '{task_id}'."
 
     lines = [
         f"Status: {job.status}",
-        f"Aufgabe: {job.description}",
+        f"Task: {job.description}",
         "",
         "Plan:",
         _format_plan(job.plan),
     ]
 
     if job.status == "done" and job.session and job.session.is_successful:
-        lines += ["", "Ergebnis:", job.session.final_result.summary]
+        lines += ["", "Result:", job.session.final_result.summary]
     elif job.status == "error":
-        lines += ["", f"Fehler: {job.error or 'Unbekannter Fehler.'}"]
+        lines += ["", f"Error: {job.error or 'Unknown error.'}"]
 
     return "\n".join(lines)
 

@@ -11,18 +11,18 @@ from src.core.logging_config import logger
 WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
 
 def run_auto_backup(interval_minutes=int(os.getenv("BACKUP_INTERVAL_MINUTES", 60 * 12))):
-    """Pusht Änderungen in regelmäßigen Abständen nach GitHub."""
-    logger.info(f"[Backup] Git Auto-Sync gestartet. Intervall: {interval_minutes} Minuten.")
+    """Pushes changes to the remote repository at regular intervals."""
+    logger.info(f"[Backup] Git auto-sync started. Interval: {interval_minutes} minutes.")
 
     while True:
         time.sleep(interval_minutes * 60)
         try:
-            # 1. Alle geänderten Dateien stagen
+            # 1. Stage all changed files
             subprocess.run(["git", "add", "."], cwd=WATCH_DIR, check=True)
             
-            # 2. Prüfen, ob es überhaupt Änderungen gibt (auf WATCH_DIR beschränkt,
-            # sonst meldet "git status" auch Änderungen außerhalb von data/, z.B. in src/,
-            # die "git add ." hier nie gestaged hätte -> "nothing to commit")
+            # 2. Check whether there are any changes at all (restricted to WATCH_DIR,
+            # otherwise "git status" also reports changes outside data/, e.g. in src/,
+            # which "git add ." here would never have staged -> "nothing to commit")
             status = subprocess.run(
                 ["git", "status", "--porcelain", "."],
                 cwd=WATCH_DIR,
@@ -31,7 +31,7 @@ def run_auto_backup(interval_minutes=int(os.getenv("BACKUP_INTERVAL_MINUTES", 60
             )
             
             if not status.stdout.strip():
-                # Keine Änderungen -> wir machen nichts
+                # No changes -> do nothing
                 continue
             
             # 3. Committen
@@ -43,4 +43,4 @@ def run_auto_backup(interval_minutes=int(os.getenv("BACKUP_INTERVAL_MINUTES", 60
             logger.info(f"[Backup] Erfolgreich gepusht um {datetime.now().strftime('%H:%M:%S')}.")
 
         except subprocess.CalledProcessError as e:
-            logger.error(f"[Backup] Fehler beim Git Sync: {e}")
+            logger.error(f"[Backup] Error during git sync: {e}")

@@ -14,8 +14,8 @@ from src.routes.files import router
 
 
 @router.delete("/content", response_model=DeleteFileResponse)
-def delete_file_content(path: str = Query(..., description="Relativer oder vollständiger Vault-Pfad zur Datei")):
-    """Löscht eine Notizdatei aus dem Vault."""
+def delete_file_content(path: str = Query(..., description="Relative or full vault path to the file")):
+    """Deletes a note file from the vault."""
     root = _vault_root().resolve()
 
 
@@ -25,25 +25,25 @@ def delete_file_content(path: str = Query(..., description="Relativer oder volls
         raise HTTPException(status_code=404, detail=str(e))
 
     if not resolved.is_file():
-        raise HTTPException(status_code=400, detail=f"'{path}' ist keine Datei.")
+        raise HTTPException(status_code=400, detail=f"'{path}' is not a file.")
 
     if not is_summarizable_path(resolved):
         raise HTTPException(
             status_code=400,
-            detail=f"Systemdatei '{resolved.name}' darf nicht gelöscht werden.",
+            detail=f"System file '{resolved.name}' must not be deleted.",
         )
 
     rel_path = _vault_path(resolved, root)
     try:
         resolved.unlink()
-        # Eintrag sofort aus der AI-Map nehmen, damit Agenten keine Phantom-Notiz sehen.
+        # Remove the entry from the AI map immediately, so agents do not see a phantom note.
         remove_map_entry(resolved, root)
-        logger.info(f"[Mutation] Datei im Frontend gelöscht: {rel_path}")
+        logger.info(f"[Mutation] File deleted from the frontend: {rel_path}")
         return DeleteFileResponse(
             path=rel_path,
             success=True,
-            message=f"Datei '{resolved.name}' wurde erfolgreich gelöscht.",
+            message=f"File '{resolved.name}' was deleted successfully.",
         )
     except Exception as e:
-        logger.error(f"[Mutation] Fehler beim Löschen von {resolved}: {e}")
-        raise HTTPException(status_code=500, detail=f"Fehler beim Löschen: {str(e)}")
+        logger.error(f"[Mutation] Error deleting {resolved}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error while deleting: {str(e)}")

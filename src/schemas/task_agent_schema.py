@@ -3,15 +3,15 @@ from pydantic import BaseModel, Field
 
 
 class TaskAgentInput(BaseModel):
-    task_id: str = Field(description="Die eigene Task-ID – bei jedem update_plan-Aufruf als Referenz mitgeben.")
-    task: str = Field(description="Die vollständige Aufgabenbeschreibung.")
-    ai_map: str = Field(description="Übersicht aller Dateien und Ordner im Vault mit Kurz-Zusammenfassung, Ausgangspunkt für die Arbeit.")
+    task_id: str = Field(description="Your own task ID - pass it as a reference on every update_plan call.")
+    task: str = Field(description="The complete description of the assignment.")
+    ai_map: str = Field(description="Overview of all files and folders in the vault with short summaries, the starting point for the work.")
 
 
 class TaskAgentOutput(BaseModel):
     summary: str = Field(
-        description="Abschlussbericht: was wurde konkret getan (inkl. tatsächlich verwendeter Vault-Pfade), "
-                     "was ggf. nicht erledigt werden konnte und warum."
+        description="Final report: what was concretely done (including the vault paths actually used), "
+                     "and what could not be completed and why."
     )
 
 

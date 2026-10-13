@@ -3,13 +3,13 @@ from pydantic import BaseModel, Field
 
 
 class LibrarianInput(BaseModel):
-    question: str = Field(description="Die Frage, die anhand des Vault-Inhalts beantwortet werden soll.")
-    ai_map: str = Field(description="Übersicht aller Dateien und Ordner im Vault mit Kurz-Zusammenfassung, Ausgangspunkt für die Recherche.")
+    question: str = Field(description="The question to be answered from the vault contents.")
+    ai_map: str = Field(description="Overview of all files and folders in the vault with short summaries, the starting point for research.")
 
 
 class LibrarianOutput(BaseModel):
-    answer: str = Field(description="Die Antwort auf die Frage, gestützt auf den tatsächlich gelesenen Vault-Inhalt.")
-    sources: list[str] = Field(default_factory=list, description="Vault-Pfade der Dateien, auf denen die Antwort beruht.")
+    answer: str = Field(description="The answer to the question, based on the vault content actually read.")
+    sources: list[str] = Field(default_factory=list, description="Vault paths of the files the answer is based on.")
 
 
 __all__ = [

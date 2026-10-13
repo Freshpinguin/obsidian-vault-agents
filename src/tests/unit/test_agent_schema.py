@@ -44,7 +44,7 @@ def test_session_message_to_openai_roles():
     assert msg_tool.to_openai() == {"role": "tool", "content": "Tool output", "tool_call_id": "call_123"}
 
     # Assistant with tool calls (ensure_ascii=False for unicode)
-    tc = ToolCall(id="tc_1", tool_name="create_file", arguments={"path": "Kulturen/Ära.md"})
+    tc = ToolCall(id="tc_1", tool_name="create_file", arguments={"path": "Meetings/Ära.md"})
     msg_asst_tools = SessionMessage(role=MessageRole.ASSISTANT, tool_calls=[tc])
     openai_asst = msg_asst_tools.to_openai()
     assert openai_asst["role"] == "assistant"
@@ -84,7 +84,7 @@ def test_build_response_format_prompt():
         response_type=SimpleOutput,
     )
     prompt_no_tools = agent_no_tools.build_response_format_prompt()
-    assert "Antworte ausschließlich mit einem einzigen validen JSON-Objekt" in prompt_no_tools
+    assert "Reply exclusively with a single valid JSON object" in prompt_no_tools
     assert '"reply": "<Antwort an den Nutzer>"' in prompt_no_tools
     assert '"score": "<Bewertung von 1 bis 10>"' in prompt_no_tools
 
@@ -102,8 +102,8 @@ def test_build_response_format_prompt():
         tools=[tool],
     )
     prompt_with_tools = agent_with_tools.build_response_format_prompt()
-    assert "## Antwortformat und Werkzeugnutzung" in prompt_with_tools
-    assert "Behaupte NIEMALS im Text einer Antwort" in prompt_with_tools
+    assert "## Response format and tool usage" in prompt_with_tools
+    assert "NEVER claim in the text of a response" in prompt_with_tools
 
 
 def test_agent_session_start_and_start_chat():
@@ -121,7 +121,7 @@ def test_agent_session_start_and_start_chat():
     assert sess_task.messages[0].role == MessageRole.SYSTEM
     assert "SYSTEM_BASE" in sess_task.messages[0].content
     assert sess_task.messages[1].role == MessageRole.USER
-    assert "Bitte verarbeite folgende Daten" in sess_task.messages[1].content
+    assert "Please process the following data" in sess_task.messages[1].content
 
     # start_chat() with extra context
     sess_chat = AgentSession(agent=agent, first_input=SimpleInput(message="hi"))

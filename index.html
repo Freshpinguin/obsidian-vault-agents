@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-<!-- Marked.js für Markdown Rendering -->
+<!-- Marked.js for Markdown rendering -->
 <script src="/static/vendor/marked.min.js"></script>
 
 <link rel="stylesheet" href="/static/css/tokens.css">
@@ -42,24 +42,24 @@
     <div class="nav-center"></div>
 
     <div class="nav-right">
-      <button class="nav-btn" id="btn-toggle-explorer" title="Explorer umschalten">
+      <button class="nav-btn" id="btn-toggle-explorer" title="Toggle explorer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
         <span>Explorer</span>
       </button>
 
-      <button class="nav-btn" id="btn-toggle-chat" title="Chat umschalten">
+      <button class="nav-btn" id="btn-toggle-chat" title="Toggle chat">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Chat</span>
       </button>
 
-      <button class="nav-btn" id="btn-open-settings" title="Optionen & Anzeige">
+      <button class="nav-btn" id="btn-open-settings" title="Options & display">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-        <span>Optionen</span>
+        <span>Options</span>
       </button>
 
-      <button class="nav-btn primary" id="btn-new-chat" title="Neue Chat-Session starten">
+      <button class="nav-btn primary" id="btn-new-chat" title="Start a new chat session">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>Neuer Chat</span>
+        <span>New chat</span>
       </button>
     </div>
   </header>
@@ -69,21 +69,21 @@
     <!-- LEFT: Explorer Pane -->
     <aside class="pane explorer-pane" id="explorer-pane">
       <div class="pane-header">
-        <span class="pane-title">Dateien & Ordner</span>
+        <span class="pane-title">Files & folders</span>
         <div class="pane-actions">
-          <button class="icon-btn" id="btn-new-file" title="Neue Notiz">
+          <button class="icon-btn" id="btn-new-file" title="New note">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
           </button>
-          <button class="icon-btn" id="btn-expand-all" title="Alle aufklappen">
+          <button class="icon-btn" id="btn-expand-all" title="Expand all">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
           </button>
-          <button class="icon-btn" id="btn-collapse-all" title="Alle zuklappen">
+          <button class="icon-btn" id="btn-collapse-all" title="Collapse all">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
           </button>
-          <button class="icon-btn" id="btn-refresh-tree" title="Aktualisieren">
+          <button class="icon-btn" id="btn-refresh-tree" title="Refresh">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           </button>
-          <button class="icon-btn" id="btn-explorer-settings" title="Optionen & Anzeige">
+          <button class="icon-btn" id="btn-explorer-settings" title="Options & display">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           </button>
         </div>
@@ -92,7 +92,7 @@
       <div class="search-bar">
         <div class="search-input-wrapper">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" class="search-input" id="explorer-search" placeholder="Dateien filtern…">
+          <input type="text" class="search-input" id="explorer-search" placeholder="Filter files…">
         </div>
       </div>
 
@@ -110,31 +110,31 @@
         <div class="breadcrumbs" id="breadcrumbs">
           <span>Vault</span>
           <span class="breadcrumb-sep">/</span>
-          <span class="breadcrumb-active" id="bc-filename">Keine Datei geöffnet</span>
+          <span class="breadcrumb-active" id="bc-filename">No file open</span>
         </div>
 
         <div class="viewer-controls" id="viewer-controls" style="display: none;">
           <div class="view-mode-switch">
-            <button class="view-mode-btn active" id="btn-mode-rendered" title="Leseansicht (Markdown gerendert)">
+            <button class="view-mode-btn active" id="btn-mode-rendered" title="Reading view (rendered Markdown)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-              <span>Gerendert</span>
+              <span>Rendered</span>
             </button>
-            <button class="view-mode-btn" id="btn-mode-raw" title="Editor (Quelltext & manuelle Bearbeitung)">
+            <button class="view-mode-btn" id="btn-mode-raw" title="Editor (source & manual editing)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-              <span>Bearbeiten</span>
+              <span>Edit</span>
             </button>
           </div>
 
-          <button class="nav-btn primary" id="btn-save-content" title="Änderungen speichern (Cmd/Strg+S)">
+          <button class="nav-btn primary" id="btn-save-content" title="Save changes (Cmd/Ctrl+S)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            <span id="btn-save-label">Speichern</span>
+            <span id="btn-save-label">Save</span>
           </button>
 
-          <button class="icon-btn" id="btn-copy-content" title="Inhalt in die Zwischenablage kopieren">
+          <button class="icon-btn" id="btn-copy-content" title="Copy content to clipboard">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
 
-          <button class="icon-btn btn-danger-icon" id="btn-delete-file" title="Diese Notiz löschen">
+          <button class="icon-btn btn-danger-icon" id="btn-delete-file" title="Delete this note">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
           </button>
         </div>
@@ -142,28 +142,28 @@
       </div>
 
       <div class="viewer-scroll-area">
-        <!-- Willkommens-Dashboard bei leerem Stand -->
+        <!-- Welcome dashboard shown when nothing is open -->
         <div class="empty-state" id="empty-state">
           <div class="empty-state-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           </div>
           <h2>Obsidian Vault Explorer</h2>
-          <p>Wähle links eine Notiz aus dem Explorer aus, um ihren Inhalt, Verknüpfungen und KI-Zusammenfassungen zu lesen, oder chatte rechts direkt mit dem Librarian-Agenten.</p>
+          <p>Pick a note from the explorer on the left to read its content, links and AI summaries, or chat with the librarian agent directly on the right.</p>
 
           <div class="quick-cards" id="quick-cards">
-            <!-- Schnellauswahl wird dynamisch gefüllt -->
+            <!-- Quick picks are filled in dynamically -->
           </div>
         </div>
 
-        <!-- Aktive Datei-Ansicht -->
+        <!-- Active file view -->
         <div class="file-container" id="file-container" style="display: none;">
           <div class="meta-header-box">
             <div class="meta-top">
               <div class="meta-filename" id="doc-title">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#818cf8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <span id="doc-title-text">Dokument.md</span>
+                <span id="doc-title-text">Document.md</span>
               </div>
-              <div class="meta-dates" id="doc-dates">Geändert: -</div>
+              <div class="meta-dates" id="doc-dates">Modified: -</div>
             </div>
 
             <div class="meta-tags" id="doc-tags"></div>
@@ -172,9 +172,9 @@
               <div class="ai-callout-header" style="justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.45rem;">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                  <span>KI-Zusammenfassung</span>
+                  <span>AI summary</span>
                 </div>
-                <button class="icon-btn" id="btn-refresh-summary-callout" title="Zusammenfassung neu generieren" style="width: 22px; height: 22px;">
+                <button class="icon-btn" id="btn-refresh-summary-callout" title="Regenerate summary" style="width: 22px; height: 22px;">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
                 </button>
               </div>
@@ -182,12 +182,12 @@
             </div>
 
             <div class="wikilinks-bar" id="doc-wikilinks" style="display: none;">
-              <span>Verknüpfte Notizen:</span>
+              <span>Linked notes:</span>
               <div id="doc-wikilinks-list" style="display: flex; gap: 0.35rem; flex-wrap: wrap;"></div>
             </div>
           </div>
 
-          <!-- Gerenderter Markdown-Inhalt -->
+          <!-- Rendered Markdown content -->
           <div class="markdown-body" id="doc-body-rendered"></div>
 
           <!-- Quelltext / Bearbeiten Editor -->
@@ -195,13 +195,13 @@
             <div class="editor-toolbar">
               <div class="editor-status" id="editor-status-bar">
                 <span class="editor-status-dot" id="editor-status-dot"></span>
-                <span id="editor-status-text">Bereit zum Bearbeiten</span>
+                <span id="editor-status-text">Ready to edit</span>
               </div>
               <div class="editor-shortcuts-hint">
-                <kbd>Cmd</kbd>/<kbd>Strg</kbd>+<kbd>S</kbd> zum Speichern
+                <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>S</kbd> to save
               </div>
             </div>
-            <textarea class="editor-textarea" id="doc-body-editor" spellcheck="false" placeholder="Hier Text eingeben oder löschen..."></textarea>
+            <textarea class="editor-textarea" id="doc-body-editor" spellcheck="false" placeholder="Type or delete text here..."></textarea>
           </div>
           <pre class="raw-editor-view" id="doc-body-raw" style="display: none;"></pre>
 
@@ -222,16 +222,16 @@
           <span>Vault Agent</span>
         </div>
 
-        <div class="chat-context-pill" id="active-file-pill" title="Keine Datei ausgewählt">
+        <div class="chat-context-pill" id="active-file-pill" title="No file selected">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-          <span id="active-file-pill-text">Kein Fokus</span>
+          <span id="active-file-pill-text">No focus</span>
         </div>
       </div>
 
       <div class="messages-container" id="messages">
         <div class="msg-item assistant">
           <div class="msg-bubble">
-            Hallo! Ich bin dein <strong>Vault-Agent</strong>. Du kannst mich alles über deinen Obsidian-Vault fragen, Notizen analysieren lassen oder neue Einträge recherchieren. Wähle links eine Notiz aus oder tippe direkt los!
+            Hi! I'm your <strong>vault agent</strong>. You can ask me anything about your Obsidian vault, have notes analyzed, or research new entries. Pick a note on the left, or just start typing.
           </div>
         </div>
       </div>
@@ -240,15 +240,15 @@
         <div class="chat-file-context-banner" id="chat-file-context-banner">
           <div class="banner-left">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span id="chat-context-banner-text">Keine Datei ausgewählt</span>
+            <span id="chat-context-banner-text">No file selected</span>
           </div>
-          <span class="banner-tag">ai_map aktiv</span>
+          <span class="banner-tag">ai_map active</span>
         </div>
         <form class="chat-form" id="chat-form">
-          <textarea class="chat-textarea" id="message-input" rows="1" placeholder="Frag den Agenten nach Notizen, Verknüpfungen…"></textarea>
+          <textarea class="chat-textarea" id="message-input" rows="1" placeholder="Ask the agent about notes, links…"></textarea>
           <div class="chat-form-bottom">
-            <span class="chat-hints">Enter zum Senden • Shift+Enter für neue Zeile</span>
-            <button type="submit" class="chat-send-btn" id="send-btn" title="Senden">
+            <span class="chat-hints">Enter to send • Shift+Enter for a new line</span>
+            <button type="submit" class="chat-send-btn" id="send-btn" title="Send">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
@@ -259,7 +259,7 @@
 </div>
 
 <!-- Floating Settings Button am linken Rand -->
-<button class="floating-settings-btn" id="btn-floating-settings" title="Optionen & Anzeige öffnen">
+<button class="floating-settings-btn" id="btn-floating-settings" title="Open options & display">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
 </button>
 
@@ -269,21 +269,21 @@
     <div class="modal-header">
       <div class="modal-title">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-        <span>Optionen & Anzeige</span>
+        <span>Options & display</span>
       </div>
-      <button class="icon-btn" id="btn-close-settings" title="Schließen">
+      <button class="icon-btn" id="btn-close-settings" title="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
     <div class="modal-body">
       <div class="settings-section">
-        <div class="settings-section-title">Dokumenten-Ansicht</div>
+        <div class="settings-section-title">Document view</div>
 
         <div class="settings-item">
           <div class="settings-info">
-            <span class="settings-label">Metadaten-Block anzeigen</span>
-            <span class="settings-desc">Blendet den gesamten Infobereich (Titel, Datum, Tags, KI-Zusammenfassung & Verlinkungen) über der Datei ein oder aus.</span>
+            <span class="settings-label">Show metadata block</span>
+            <span class="settings-desc">Shows or hides the whole info area above the file (title, date, tags, AI summary & links).</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="setting-show-metadata" checked>
@@ -293,8 +293,8 @@
 
         <div class="settings-item">
           <div class="settings-info">
-            <span class="settings-label">KI-Zusammenfassung einblenden</span>
-            <span class="settings-desc">Zeigt die violette KI-Kurzzusammenfassung im oberen Dateikopf an.</span>
+            <span class="settings-label">Show AI summary</span>
+            <span class="settings-desc">Shows the purple short AI summary in the file header.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="setting-show-ai-summary" checked>
@@ -304,8 +304,8 @@
 
         <div class="settings-item">
           <div class="settings-info">
-            <span class="settings-label">Verknüpfte Notizen ([[Wikilinks]])</span>
-            <span class="settings-desc">Zeigt ausgehende Querverweise und Links im Dateikopf an.</span>
+            <span class="settings-label">Linked notes ([[wikilinks]])</span>
+            <span class="settings-desc">Shows outgoing cross-references and links in the file header.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="setting-show-wikilinks" checked>
@@ -315,12 +315,12 @@
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-title">Dateibaum & Synchronisation</div>
+        <div class="settings-section-title">File tree & synchronization</div>
 
         <div class="settings-item">
           <div class="settings-info">
-            <span class="settings-label">Echtzeit Live-Sync (SSE)</span>
-            <span class="settings-desc">Aktualisiert die Sidebar automatisch, sobald der Agent oder Obsidian Notizen anlegt oder ändert.</span>
+            <span class="settings-label">Real-time live sync (SSE)</span>
+            <span class="settings-desc">Updates the sidebar automatically as soon as the agent or Obsidian creates or changes notes.</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="setting-live-sync" checked>
@@ -330,91 +330,91 @@
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-title">KI-Zusammenfassungen (Vault)</div>
+        <div class="settings-section-title">AI summaries (vault)</div>
         <div class="settings-item" style="flex-direction: column; align-items: flex-start; gap: 0.65rem;">
           <div class="settings-info">
-            <span class="settings-label">Fehlende Zusammenfassungen generieren</span>
-            <span class="settings-desc">Scannt alle Notizen und Ordner im gesamten Vault und erstellt automatisch KI-Zusammenfassungen für alle Einträge, bei denen sie noch fehlen.</span>
+            <span class="settings-label">Generate missing summaries</span>
+            <span class="settings-desc">Scans every note and folder in the whole vault and automatically creates AI summaries for all entries still missing one.</span>
           </div>
           <button class="nav-btn primary" id="btn-build-missing-summaries" style="width: 100%; justify-content: center; gap: 0.5rem; padding: 0.55rem 1rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-            <span id="btn-build-missing-text">Fehlende Zusammenfassungen erstellen</span>
+            <span id="btn-build-missing-text">Create missing summaries</span>
           </button>
         </div>
       </div>
 
       <div class="settings-section">
-        <div class="settings-section-title">Editor Lesegröße</div>
+        <div class="settings-section-title">Editor text size</div>
         <div class="settings-item" style="flex-direction: column; align-items: flex-start; gap: 0.6rem;">
-          <span class="settings-desc">Wähle die angenehmste Textgröße für das Lesen von Markdown-Dateien:</span>
+          <span class="settings-desc">Pick the most comfortable text size for reading Markdown files:</span>
           <div style="display: flex; gap: 0.5rem; width: 100%;">
-            <button class="nav-btn font-size-btn" data-size="compact" style="flex: 1; justify-content: center;">Kompakt</button>
-            <button class="nav-btn font-size-btn active" data-size="normal" style="flex: 1; justify-content: center;">Standard</button>
-            <button class="nav-btn font-size-btn" data-size="large" style="flex: 1; justify-content: center;">Groß</button>
+            <button class="nav-btn font-size-btn" data-size="compact" style="flex: 1; justify-content: center;">Compact</button>
+            <button class="nav-btn font-size-btn active" data-size="normal" style="flex: 1; justify-content: center;">Normal</button>
+            <button class="nav-btn font-size-btn" data-size="large" style="flex: 1; justify-content: center;">Large</button>
           </div>
         </div>
       </div>
     </div>
 
     <div class="modal-footer">
-      <span class="modal-footer-note">Einstellungen werden automatisch im Browser gesichert.</span>
-      <button class="nav-btn primary" id="btn-save-settings-close">Fertig</button>
+      <span class="modal-footer-note">Settings are saved automatically in your browser.</span>
+      <button class="nav-btn primary" id="btn-save-settings-close">Done</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Notiz löschen Bestätigung -->
+<!-- Modal: confirm note deletion -->
 <div class="modal-backdrop" id="delete-modal">
   <div class="modal-card" style="max-width: 440px;">
     <div class="modal-header">
       <div class="modal-title" style="color: var(--red);">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        <span>Notiz endgültig löschen?</span>
+        <span>Permanently delete note?</span>
       </div>
-      <button class="icon-btn" id="btn-close-delete-modal" title="Abbrechen">
+      <button class="icon-btn" id="btn-close-delete-modal" title="Cancel">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
     <div class="modal-body">
       <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-        Möchtest du die Datei <strong id="delete-file-name" style="color: var(--text-primary); font-family: var(--font-mono);">Dokument.md</strong> wirklich aus deinem Obsidian-Vault löschen?
+        Do you really want to delete the file <strong id="delete-file-name" style="color: var(--text-primary); font-family: var(--font-mono);">Document.md</strong> from your Obsidian vault?
       </p>
       <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; font-size: 0.78rem; color: #fca5a5; display: flex; align-items: center; gap: 0.5rem;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span>Diese Aktion kann nicht rückgängig gemacht werden.</span>
+        <span>This action cannot be undone.</span>
       </div>
     </div>
 
     <div class="modal-footer" style="justify-content: flex-end; gap: 0.5rem;">
-      <button class="nav-btn" id="btn-cancel-delete">Abbrechen</button>
+      <button class="nav-btn" id="btn-cancel-delete">Cancel</button>
       <button class="nav-btn btn-danger" id="btn-confirm-delete">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        <span id="btn-confirm-delete-text">Löschen</span>
+        <span id="btn-confirm-delete-text">Delete</span>
       </button>
     </div>
   </div>
 </div>
 
-<!-- Modal: Neue Notiz / Neuer Ordner erstellen -->
+<!-- Modal: create a new note / folder -->
 <div class="modal-backdrop" id="create-modal">
   <div class="modal-card" style="max-width: 440px;">
     <div class="modal-header">
       <div class="modal-title">
-        <span id="create-modal-title">Neue Notiz</span>
+        <span id="create-modal-title">New note</span>
       </div>
-      <button class="icon-btn" id="btn-close-create-modal" title="Schließen">
+      <button class="icon-btn" id="btn-close-create-modal" title="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
     <div class="modal-body">
-      <input type="text" class="search-input" id="create-name-input" placeholder="Notizname (z. B. Meine Notiz)" style="width: 100%;">
+      <input type="text" class="search-input" id="create-name-input" placeholder="Note name (e.g. My Note)" style="width: 100%;">
     </div>
 
     <div class="modal-footer" style="justify-content: flex-end; gap: 0.5rem;">
-      <button class="nav-btn" id="btn-cancel-create">Abbrechen</button>
-      <button class="nav-btn" id="btn-confirm-create">Erstellen</button>
+      <button class="nav-btn" id="btn-cancel-create">Cancel</button>
+      <button class="nav-btn" id="btn-confirm-create">Create</button>
     </div>
   </div>
 </div>

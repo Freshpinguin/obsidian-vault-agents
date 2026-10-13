@@ -8,19 +8,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.core.logging_config import logger
+from src.core.obsidian_processor import PENDING_SUMMARY_TEXT
 
-# Der Hauptordner deines Wikis
+# The root folder of the vault
 WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
-# Die Map ist jetzt auch eine unsichtbare Datei
+# The map is a hidden file as well
 MAP_FILE = os.path.join(WATCH_DIR, ".ai_map.json")
 
 def get_content_hash(text: str) -> str:
-    """Erzeugt einen eindeutigen Fingerabdruck (Hash) des Textes."""
+    """Produces a unique fingerprint (hash) of the text."""
     return hashlib.md5(text.encode('utf-8')).hexdigest()
 
 def ensure_directory_index(absolute_dir_path: str):
-    """Prüft, ob der Ordner eine .index.md hat, und legt sie unsichtbar an."""
-    # Wir ignorieren das Hauptverzeichnis (/app/data), wir wollen das nur für Unterordner
+    """Checks whether the folder has an .index.md and creates it (hidden) if not."""
+    # Skip the root directory (/app/data); this is only wanted for subfolders
     if absolute_dir_path == WATCH_DIR or absolute_dir_path.endswith(os.sep):
         return
         
@@ -29,22 +30,22 @@ def ensure_directory_index(absolute_dir_path: str):
     if not os.path.exists(index_file):
         rel_dir = os.path.relpath(absolute_dir_path, WATCH_DIR)
         
-        # Erstelle eine leere Datei, aber mit fertigem YAML-Header für die KI
+        # Create an empty file, but with a ready-made YAML header for the AI
         doc = frontmatter.Post("")
         doc.metadata['is_directory_index'] = True
         doc.metadata['folder_name'] = rel_dir
-        doc.metadata['ai_summary'] = "Ordner-Zusammenfassung ausstehend..."
+        doc.metadata['ai_summary'] = PENDING_SUMMARY_TEXT
         doc.metadata['last_modified'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         try:
             with open(index_file, 'w', encoding='utf-8') as f:
                 f.write(frontmatter.dumps(doc))
-            logger.info(f"[Core] Unsichtbare .index.md erstellt für Ordner: {rel_dir}")
+            logger.info(f"[Core] Hidden .index.md created for folder: {rel_dir}")
         except Exception as e:
-            logger.error(f"Fehler beim Erstellen von {index_file}: {e}")
+            logger.error(f"Error creating {index_file}: {e}")
 
 def update_ai_map(absolute_file_path: str):
-    """Aktualisiert die JSON-Map mit Dateien und Ordnern."""
+    """Updates the JSON map with files and folders."""
     rel_path = os.path.relpath(absolute_file_path, WATCH_DIR)
     rel_dir = os.path.dirname(rel_path)
 
@@ -60,30 +61,30 @@ def update_ai_map(absolute_file_path: str):
     if "directories" not in ai_map: ai_map["directories"] = {}
     if "files" not in ai_map: ai_map["files"] = {}
 
-    ai_map["files"][rel_path] = "Zusammenfassung ausstehend..."
+    ai_map["files"][rel_path] = PENDING_SUMMARY_TEXT
 
     if rel_dir and rel_dir != ".":
         if rel_dir not in ai_map["directories"]:
-            ai_map["directories"][rel_dir] = "Zusammenfassung ausstehend..."
+            ai_map["directories"][rel_dir] = PENDING_SUMMARY_TEXT
 
     with open(MAP_FILE, 'w', encoding='utf-8') as f:
         json.dump(ai_map, f, indent=2, ensure_ascii=False)
     
-    logger.info(f"[Core] AI Map aktualisiert für: {rel_path}")
+    logger.info(f"[Core] AI map updated for: {rel_path}")
 
 def process_document(file_path: str):
-    """Wird aufgerufen, wenn der Watchdog eine Änderung bemerkt."""
+    """Called when the watchdog notices a change."""
     
     filename = os.path.basename(file_path)
     
-    # WICHTIG: Ignoriere alles, was mit einem Punkt (.) beginnt, um Endlosschleifen zu verhindern!
+    # IMPORTANT: ignore everything starting with a dot (.) to prevent endless loops.
     if not file_path.endswith('.md') or '.sync-conflict' in file_path or filename.startswith('.') or filename.startswith('_'):
         return
 
     try:
         doc = frontmatter.load(file_path)
     except Exception as e:
-        logger.error(f"Fehler beim Lesen von {file_path}: {e}")
+        logger.error(f"Error reading {file_path}: {e}")
         return
 
     content = doc.content
@@ -99,13 +100,13 @@ def process_document(file_path: str):
     try:
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(frontmatter.dumps(doc))
-        logger.info(f"[Core] Metadaten aktualisiert für: {filename}")
+        logger.info(f"[Core] Metadata updated for: {filename}")
 
-        # 1. Stelle sich‚‚‚er, dass der Ordner seine versteckte Index-Datei hat
+        # 1. Ensure the folder has its hidden index file
         ensure_directory_index(os.path.dirname(file_path))
 
-        # 2. Aktualisiere die zentrale (jetzt versteckte) JSON-Map
+        # 2. Update the central (now hidden) JSON map
         update_ai_map(file_path)
 
     except Exception as e:
-        logger.error(f"Fehler beim Speichern von {file_path}: {e}")
+        logger.error(f"Error saving {file_path}: {e}")

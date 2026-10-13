@@ -1,5 +1,5 @@
 # src/agentic/engine/model_rotation.py
-"""Wiederverwendbare Modell-Rotation für Free-Tier-Kontingente."""
+"""Reusable model rotation for free-tier quotas."""
 import itertools
 import threading
 from typing import Sequence
@@ -8,7 +8,7 @@ from src.schemas.llm_models import LLMModels
 
 
 class ModelRotation:
-    """Thread-sicherer Modell-Rotator über eine feste Sequenz von Modellen."""
+    """Thread-safe model rotator over a fixed sequence of models."""
 
     def __init__(self, models: Sequence[LLMModels]):
         self.models = tuple(models)

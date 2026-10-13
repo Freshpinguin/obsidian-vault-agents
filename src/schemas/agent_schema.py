@@ -26,10 +26,9 @@ class ToolCall(BaseModel):
 
 
 class SessionMessage(BaseModel):
-    """Eine Nachricht im Gesprächsverlauf einer AgentSession. Die Session besteht aus
-    einer Liste dieser Nachrichten; daraus wird bei jedem LLM-Aufruf der Kontext
-    (die 'messages' fürs litellm-Completion) neu zusammengesetzt (siehe
-    AgentSession.build_messages)."""
+    """A message in the conversation history of an AgentSession. The session consists
+    of a list of these messages; the context for every LLM call (the 'messages' for the
+    litellm completion) is reassembled from them (see AgentSession.build_messages)."""
     role: MessageRole
     content: str | None = None
     tool_calls: list[ToolCall] = Field(default_factory=list)
@@ -63,29 +62,29 @@ class WikiAgent(BaseModel):
     input_type: Type[BaseModel]
     response_type: Type[BaseModel]
     default_model:LLMModels =LLMModels.GEMINI_3_5_FLASH_LITE
-    temperature: float = Field(default=0.2, description="Sampling-Temperatur für LLM-Aufrufe dieses Agenten.")
-    max_retries: int = Field(default=3, description="Maximale Wiederholungen bei Parse-Fehlern der finalen Antwort.")
-    tools: list[WikiTool] = Field(default_factory=list, description="Werkzeuge, die der Agent per ReAct-Loop aufrufen kann.")
-    max_tool_iterations: int = Field(default=15, description="Maximale Anzahl an Tool-Aufruf-Runden (ReAct-Schritten) pro Session.")
+    temperature: float = Field(default=0.2, description="Sampling temperature for this agent's LLM calls.")
+    max_retries: int = Field(default=3, description="Maximum retries on parse errors of the final response.")
+    tools: list[WikiTool] = Field(default_factory=list, description="Tools the agent can call via the ReAct loop.")
+    max_tool_iterations: int = Field(default=15, description="Maximum number of tool-call rounds (ReAct steps) per session.")
     enable_context_compaction: bool = Field(
         default=False,
-        description="Ob der ältere Gesprächsverlauf bei Bedarf per günstigem LLM verdichtet wird, um Tokens "
-                     "zu sparen (siehe context_compactor.py). Sinnvoll für Agenten mit vielen ReAct-Runden.",
+        description="Whether the older conversation history is compacted by a cheap LLM when needed, to "
+                     "save tokens (see compaction.py). Useful for agents with many ReAct rounds.",
     )
-    compaction_model: LLMModels = Field(default=LLMModels.GEMMA_26B, description="Günstiges Modell für die Kontext-Verdichtung.")
-    compaction_threshold_chars: int = Field(default=30000, description="Ab wie vielen Zeichen im aktuellen Kontext eine Verdichtung ausgelöst wird.")
-    compaction_keep_recent_rounds: int = Field(default=3, description="Wie viele der letzten ReAct-Runden beim Verdichten unangetastet bleiben.")
+    compaction_model: LLMModels = Field(default=LLMModels.GEMMA_26B, description="Cheap model used for context compaction.")
+    compaction_threshold_chars: int = Field(default=30000, description="The number of characters in the current context above which compaction is triggered.")
+    compaction_keep_recent_rounds: int = Field(default=3, description="How many of the most recent ReAct rounds are left untouched when compacting.")
     require_tool_call_first_round: bool = Field(
         default=False,
-        description="Erzwingt in der allerersten Runde eines Turns per tool_choice='required' einen "
-                     "Tool-Aufruf, und wertet eine finale Antwort ohne JEDEN Tool-Aufruf als ungültig (Retry "
-                     "statt Erfolg). Nur für Agenten sinnvoll, die laut Prompt IMMER mindestens ein Tool "
-                     "nutzen müssen (z.B. TaskAgent: update_plan) - verhindert, dass das Modell eine "
-                     "komplexe Aufgabe ungeprüft als 'erledigt' halluziniert, ohne je etwas getan zu haben.",
+        description="Forces a tool call in the very first round of a turn via tool_choice='required', and "
+                     "treats a final response without ANY tool call as invalid (retry instead of success). "
+                     "Only useful for agents whose prompt requires them to ALWAYS use at least one tool "
+                     "(e.g. TaskAgent: update_plan) - prevents the model from hallucinating a complex task "
+                     "as 'done' without ever having done anything.",
     )
 
     def build_response_format_prompt(self) -> str:
-        """Erzeugt aus response_type automatisch die Anweisung fürs erwartete JSON-Antwortformat."""
+        """Derives the instruction for the expected JSON response format from response_type."""
         lines = [
             f'  "{field_name}": "<{field.description or field_name}>"'
             for field_name, field in self.response_type.model_fields.items()
@@ -93,19 +92,19 @@ class WikiAgent(BaseModel):
         schema_block = "{\n" + ",\n".join(lines) + "\n}"
         if self.tools:
             return (
-                "## Antwortformat und Werkzeugnutzung\n"
-                "WICHTIGE REGELN:\n"
-                "1. Wenn für die Anfrage Werkzeuge erforderlich oder sinnvoll sind (z.B. Dateien lesen, suchen, erstellen, bearbeiten oder verschieben), "
-                "musst du ZUERST die entsprechenden Werkzeuge per Tool-Call aufrufen!\n"
-                "2. Behaupte NIEMALS im Text einer Antwort, dass du eine Datei angelegt, geändert oder gelesen hast, "
-                "ohne das Werkzeug dafür tatsächlich aufgerufen zu haben.\n"
-                "3. Erst wenn alle benötigten Werkzeuge ausgeführt wurden (oder bei einfachen Antworten/Smalltalk ohne Werkzeuge), "
-                "gibst du deine finale Antwort als valides JSON-Objekt nach folgendem Schema ab (ohne Markdown-Codeblock, ohne Text davor/danach):\n"
+                "## Response format and tool usage\n"
+                "IMPORTANT RULES:\n"
+                "1. If tools are required or sensible for the request (e.g. reading, searching, creating, editing or moving files), "
+                "you must call the appropriate tools as tool calls FIRST!\n"
+                "2. NEVER claim in the text of a response that you have created, changed or read a file "
+                "without having actually called the tool for it.\n"
+                "3. Only once all required tools have been executed (or, for simple answers/small talk, without tools) "
+                "do you give your final answer as a valid JSON object following this schema (no Markdown code block, no text before or after):\n"
                 + schema_block
             )
         return (
-            "Antworte ausschließlich mit einem einzigen validen JSON-Objekt exakt nach folgendem Schema, "
-            "ohne zusätzlichen Text, ohne Markdown-Codeblock:\n" + schema_block
+            "Reply exclusively with a single valid JSON object following exactly this schema, "
+            "with no additional text and no Markdown code block:\n" + schema_block
         )
 
     def validate_input(self, input_data: Any) -> BaseModel:
@@ -113,12 +112,12 @@ class WikiAgent(BaseModel):
             return self.input_type.model_validate(input_data)
         elif isinstance(input_data, BaseModel):
             return self.input_type.model_validate(input_data.model_dump())
-        raise ValueError(f"[{self.name}] input_data muss dict oder BaseModel sein.")
+        raise ValueError(f"[{self.name}] input_data must be a dict or a BaseModel.")
 
     def parse_response(self, raw_output: str) -> ParseResult:
         """
-        Prüft den String gegen das response_type Schema.
-        Generiert bei Fehlschlag einen detaillierten Text-Bericht für das LLM.
+        Validates the string against the response_type schema.
+        On failure, generates a detailed textual report for the LLM.
         """
         try:
             parsed = self.response_type.model_validate_json(raw_output)
@@ -131,22 +130,22 @@ class WikiAgent(BaseModel):
             for err in errors:
                 field_path = " -> ".join([str(loc) for loc in err['loc']])
                 msg = err['msg']
-                input_val = err.get('input', 'Unbekannt')
-                error_messages.append(f"- Feld '{field_path}': {msg}. (Deine Eingabe war: {input_val})")
+                input_val = err.get('input', 'unknown')
+                error_messages.append(f"- Field '{field_path}': {msg}. (Your input was: {input_val})")
 
             report = (
-                "Die vorherige Antwort war ungültig und entsprach nicht dem geforderten JSON-Schema. "
-                "Bitte korrigiere folgende Fehler zwingend:\n" + 
+                "The previous response was invalid and did not match the required JSON schema. "
+                "You must correct the following errors:\n" + 
                 "\n".join(error_messages) +
-                "\n\nHier ist deine fehlerhafte rohe Antwort zur Referenz:\n" +
+                "\n\nHere is your faulty raw response for reference:\n" +
                 f"```json\n{raw_output}\n```"
             )
             return ParseResult(status=AgentStatus.ERROR, error_report=report)
 
 class LLMCall(BaseModel):
-    """Ein einzelner LLM-Turn innerhalb einer AgentSession: entweder ein oder mehrere
-    Tool-Aufrufe (status=TOOL_CALL), eine ungültige finale Antwort (status=ERROR)
-    oder die valide finale Antwort (status=SUCCESS)."""
+    """A single LLM turn within an AgentSession: either one or more tool calls
+    (status=TOOL_CALL), an invalid final response (status=ERROR), or the valid final
+    response (status=SUCCESS)."""
     agent_name: str
     status: AgentStatus
     input_data: BaseModel
@@ -178,23 +177,23 @@ class LLMCall(BaseModel):
             for tc in self.tool_calls:
                 log_lines.append(f"{tc.tool_name}({tc.arguments}) -> {tc.result}")
         else:
-            log_lines.extend(["--- ERROR ---", self.error_message or "Unbekannter Fehler"])
+            log_lines.extend(["--- ERROR ---", self.error_message or "Unknown error"])
         log_lines.append("=========================================")
         return "\n".join(log_lines)
 
 class AgentSession(BaseModel):
-    """Eine ReAct-Session: von der ersten Eingabe über beliebig viele Tool-Aufrufe bis
-    zur finalen strukturierten Antwort. 'messages' ist der vollständige Gesprächsverlauf
-    und alleinige Quelle für den Kontext, der bei jedem LLM-Aufruf gesendet wird (siehe
-    build_messages) – nichts wird daneben nochmal separat mitgeführt. 'history' ist die
-    Turn-für-Turn-Bilanz (für Logging/Statistik und den finalen Erfolg/Ergebnis-Check)."""
+    """A ReAct session: from the first input, through any number of tool calls, to the
+    final structured response. 'messages' is the complete conversation history and the
+    sole source of the context sent on every LLM call (see build_messages) - nothing is
+    carried alongside it. 'history' is the turn-by-turn record (for logging/statistics
+    and the final success/result check)."""
     agent: WikiAgent
     first_input: BaseModel
     session_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
     started_at: datetime = Field(default_factory=datetime.now)
     messages: list[SessionMessage] = Field(default_factory=list)
     history: list[LLMCall] = Field(default_factory=list)
-    log_path: str | None = Field(default=None, description="Pfad der Logdatei dieser Session (siehe SessionLogger) – über alle Turns hinweg dieselbe Datei.")
+    log_path: str | None = Field(default=None, description="Path of this session's log file (see SessionLogger) - the same file across all turns.")
 
     def _system_message(self, extra_context: str | None = None) -> SessionMessage:
         system_content = f"{self.agent.system_prompt}\n\n{self.agent.build_response_format_prompt()}"
@@ -203,33 +202,33 @@ class AgentSession(BaseModel):
         return SessionMessage(role=MessageRole.SYSTEM, content=system_content)
 
     def start(self, valid_input: BaseModel) -> None:
-        """Initialisiert den Gesprächsverlauf eines Ein-Schritt-Task-Agenten mit
-        System-Prompt und der kompletten Eingabe als JSON. Muss einmal zu Beginn der
-        Session aufgerufen werden, bevor build_messages() sinnvolle Ergebnisse liefert."""
+        """Initializes the conversation history of a one-shot task agent with the system
+        prompt and the complete input as JSON. Must be called once at the start of the
+        session before build_messages() returns anything useful."""
         self.messages.append(self._system_message())
         self.messages.append(SessionMessage(
             role=MessageRole.USER,
-            content=f"Bitte verarbeite folgende Daten:\n\n```json\n{valid_input.model_dump_json(indent=2)}\n```",
+            content=f"Please process the following data:\n\n```json\n{valid_input.model_dump_json(indent=2)}\n```",
         ))
 
     def start_chat(self, first_message: str, context: str | None = None) -> None:
-        """Initialisiert den Gesprächsverlauf eines Chat-Agenten: System-Prompt (optional
-        ergänzt um zusätzlichen Hintergrund-Kontext, z.B. die aktuelle ai_map, damit der
-        Agent den von Anfang an kennt statt ihn erst erfragen zu müssen) plus die erste
-        Nutzer-Nachricht als reiner Text (keine JSON-Verpackung wie bei start()), damit
-        sich das Ganze wie eine normale Unterhaltung liest."""
+        """Initializes the conversation history of a chat agent: the system prompt
+        (optionally extended with additional background context, e.g. the current ai_map,
+        so the agent knows it from the outset instead of having to ask for it) plus the
+        first user message as plain text (no JSON wrapper as in start()), so the whole
+        thing reads like a normal conversation."""
         self.messages.append(self._system_message(context))
         self.messages.append(SessionMessage(role=MessageRole.USER, content=first_message))
 
     def add_user_message(self, message: str) -> None:
-        """Hängt eine weitere Nutzer-Nachricht an eine bereits laufende Chat-Session an
-        (z.B. eine Folgefrage), ohne die bisherige Historie zu verlieren."""
+        """Appends another user message to an already running chat session (e.g. a
+        follow-up question) without losing the history so far."""
         self.messages.append(SessionMessage(role=MessageRole.USER, content=message))
 
     def build_messages(self) -> list[dict]:
-        """Setzt den vollständigen litellm-Kontext aus dem bisherigen Gesprächsverlauf
-        (self.messages) zusammen. Der Kontext für jeden LLM-Aufruf entsteht also
-        ausschließlich aus der Session selbst, nicht aus einer separaten Variable."""
+        """Assembles the complete litellm context from the conversation history so far
+        (self.messages). The context for every LLM call therefore arises exclusively from
+        the session itself, not from a separate variable."""
         return [m.to_openai() for m in self.messages]
 
     @property

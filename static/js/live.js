@@ -12,8 +12,8 @@ export function scheduleFileTreeRefresh(delayMs = 300, modifiedPath = null) {
   if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
   refreshDebounceTimer = setTimeout(async () => {
     await loadFileTree();
-    // Falls die aktuell im Editor geöffnete Datei geändert wurde,
-    // deren Inhalt und Zusammenfassung ebenfalls aktualisieren
+    // If the file currently open in the editor was changed,
+    // refresh its content and summary as well
     if (modifiedPath && state.currentFile && modifiedPath.endsWith(state.currentFile)) {
       await loadFileContent(state.currentFile);
     }
@@ -29,7 +29,7 @@ export function stopFileWatcherEvents() {
 
 export function initFileWatcherEvents() {
   if (!window.EventSource) {
-    console.warn("EventSource nicht unterstützt. Verwende Fallback-Polling.");
+    console.warn("EventSource not supported. Falling back to polling.");
     setInterval(() => loadFileTree(), 5000);
     return;
   }
@@ -41,7 +41,7 @@ export function initFileWatcherEvents() {
     fileEventSource = new EventSource("/files/events");
 
     fileEventSource.addEventListener("connected", () => {
-      console.log("[Live-Sync] Echtzeit-Verbindung für Vault-Änderungen aktiv.");
+      console.log("[Live-Sync] Real-time connection for vault changes is active.");
     });
 
     const handleVaultChange = (e) => {
@@ -64,10 +64,10 @@ export function initFileWatcherEvents() {
     fileEventSource.addEventListener("change", handleVaultChange);
 
     fileEventSource.onerror = () => {
-      // EventSource unternimmt automatisch im Hintergrund Reconnects
+      // EventSource reconnects automatically in the background
     };
   } catch (err) {
-    console.error("[Live-Sync] Fehler bei EventSource:", err);
+    console.error("[Live-Sync] EventSource error:", err);
     setInterval(() => loadFileTree(), 5000);
   }
 }

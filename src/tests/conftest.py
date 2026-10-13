@@ -1,9 +1,9 @@
-"""Globale Test-Infrastruktur.
+"""Global test infrastructure.
 
-WICHTIG: Mehrere Module frieren den Vault-Pfad (``WATCH_DIR``) und ``LOG_DIR`` beim
-IMPORT ein. Deshalb werden die Umgebungsvariablen hier ganz oben gesetzt, bevor
-irgendein ``src``-Modul importiert wird. Der Vault liegt für alle Tests unter demselben
-Pfad und wird vor jedem Test geleert und frisch aus ``data.example/`` befüllt.
+IMPORTANT: several modules freeze the vault path (``WATCH_DIR``) and ``LOG_DIR`` at
+IMPORT time. The environment variables are therefore set at the very top here, before
+any ``src`` module is imported. The vault lives at the same path for all tests and is
+emptied and refilled from ``data.example/`` before each test.
 """
 import os
 import shutil
@@ -26,7 +26,7 @@ import itertools  # noqa: E402
 
 import httpx  # noqa: E402
 
-# Kompatibilität: httpx >= 0.28 entfernte das 'app='-Keyword, das älteres starlette.testclient noch übergibt
+# Compatibility: httpx >= 0.28 removed the 'app=' keyword that older starlette.testclient still passes
 _orig_httpx_init = httpx.Client.__init__
 httpx.Client.__init__ = lambda self, *a, **k: _orig_httpx_init(
     self, *a, **{k_: v for k_, v in k.items() if k_ != "app"}
@@ -53,11 +53,11 @@ def _fill_vault() -> Path:
 
 @pytest.fixture(autouse=True)
 def vault() -> Path:
-    """Frischer Test-Vault (Kopie von data.example) für JEDEN Test."""
+    """A fresh test vault (a copy of data.example) for EVERY test."""
     return _fill_vault()
 
 
-# --------------------------------------------------------------------------- Netzwerk-Sperre
+# ------------------------------------------------------------------------- Network lockdown
 
 
 def _forbidden(name: str):
@@ -68,7 +68,7 @@ def _forbidden(name: str):
 
 @pytest.fixture(autouse=True)
 def _no_network(monkeypatch, request):
-    """Sicherheitsnetz: ohne Fake-Fixture schlägt jeder externe Aufruf laut fehl."""
+    """Safety net: without a fake fixture, any external call fails loudly."""
     if request.node.get_closest_marker("live"):
         yield
         return
@@ -93,6 +93,8 @@ def fake_llm(monkeypatch, _no_network):
     fake = FakeLLM()
     monkeypatch.setattr(litellm, "completion", fake)
     monkeypatch.setattr("src.agentic.engine.runner.supports_tool_choice", lambda model: True)
+    # No test should actually wait out the retry backoff of _completion_with_failover.
+    monkeypatch.setattr("src.agentic.engine.runner.RETRY_BACKOFF_S", (0.0, 0.0))
     yield fake
     fake.assert_clean()
 
@@ -119,7 +121,7 @@ def fake_antigravity(monkeypatch, _no_network):
 
 
 class _SyncThread:
-    """Ersatz für threading.Thread, der das Target direkt in start() ausführt."""
+    """A threading.Thread replacement that runs the target directly in start()."""
 
     def __init__(self, target=None, args=(), kwargs=None, daemon=None, **_):
         self._target, self._args, self._kwargs = target, args, kwargs or {}
@@ -133,7 +135,7 @@ class _SyncThread:
 
 @pytest.fixture
 def sync_threads(monkeypatch):
-    """Lässt start_background_task synchron laufen (Task-Agent im selben Thread)."""
+    """Runs start_background_task synchronously (task agent in the same thread)."""
     monkeypatch.setattr("src.agentic.engine.jobs.threading.Thread", _SyncThread)
 
 

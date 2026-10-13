@@ -3,11 +3,11 @@ from pydantic import BaseModel, Field
 
 
 class ChatInput(BaseModel):
-    message: str = Field(description="Die (erste) Nachricht des Nutzers im Chat.")
+    message: str = Field(description="The user's (first) message in the chat.")
 
 
 class ChatOutput(BaseModel):
-    reply: str = Field(description="Die Antwort an den Nutzer im Chat, in normaler Konversationssprache.")
+    reply: str = Field(description="The reply to the user in the chat, in normal conversational language.")
 
 
 __all__ = [

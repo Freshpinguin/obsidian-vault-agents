@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class FileNode(BaseModel):
-    """Repräsentiert einen Knoten im Vault-Dateibaum (Datei oder Verzeichnis)."""
+    """Represents a node in the vault file tree (a file or a directory)."""
     name: str
     path: str
     type: Literal["file", "directory"]
@@ -17,7 +17,7 @@ class FileNode(BaseModel):
 
 
 class FileTreeResponse(BaseModel):
-    """Antwortmodell für den vollständigen Vault-Dateibaum."""
+    """Response model for the complete vault file tree."""
     root_path: str
     total_files: int
     total_directories: int
@@ -25,7 +25,7 @@ class FileTreeResponse(BaseModel):
 
 
 class FileContentResponse(BaseModel):
-    """Antwortmodell für den Inhalt einer einzelnen Datei."""
+    """Response model for the content of a single file."""
     path: str
     name: str
     raw_content: str
@@ -38,12 +38,12 @@ class FileContentResponse(BaseModel):
 
 
 class RequestSummaryRequest(BaseModel):
-    """Anfrage zum Anfordern/Neugenerieren einer KI-Zusammenfassung für eine Datei."""
+    """Request to generate or regenerate an AI summary for a file."""
     path: str
 
 
 class RequestSummaryResponse(BaseModel):
-    """Ergebnis nach der Neugenerierung der Zusammenfassung."""
+    """Result after regenerating the summary."""
     path: str
     success: bool
     ai_summary: str | None = None
@@ -52,7 +52,7 @@ class RequestSummaryResponse(BaseModel):
 
 
 class BuildMissingSummariesResponse(BaseModel):
-    """Ergebnis nach dem Durchlauf zum Erstellen aller fehlenden Zusammenfassungen."""
+    """Result after the pass that creates all missing summaries."""
     success: bool
     files_processed: int
     total_missing_files: int
@@ -62,13 +62,13 @@ class BuildMissingSummariesResponse(BaseModel):
 
 
 class UpdateFileRequest(BaseModel):
-    """Anfrage zum Bearbeiten/Speichern einer Datei im Vault."""
+    """Request to edit/save a file in the vault."""
     path: str
     content: str
 
 
 class UpdateFileResponse(BaseModel):
-    """Antwort nach dem Bearbeiten einer Datei."""
+    """Response after editing a file."""
     path: str
     success: bool
     message: str
@@ -76,26 +76,26 @@ class UpdateFileResponse(BaseModel):
 
 
 class DeleteFileResponse(BaseModel):
-    """Antwort nach dem Löschen einer Datei."""
+    """Response after deleting a file."""
     path: str
     success: bool
     message: str
 
 
 class MoveNodeRequest(BaseModel):
-    """Anfrage zum Verschieben einer Datei oder Notiz im Vault."""
+    """Request to move a file or note within the vault."""
     path: str
     new_path: str
 
 
 class CreateNoteRequest(BaseModel):
-    """Anfrage zum Erstellen einer neuen Notizdatei im Vault."""
+    """Request to create a new note file in the vault."""
     path: str
     content: str = ""
 
 
 class MutationResponse(BaseModel):
-    """Standard-Antwortmodell für schreibende Datei- und Ordneroperationen."""
+    """Standard response model for file and folder write operations."""
     path: str
     success: bool
     message: str

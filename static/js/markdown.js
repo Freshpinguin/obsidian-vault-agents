@@ -15,7 +15,7 @@ export function renderMarkdown(md) {
     return window.marked.parse(withWikilinks);
   }
 
-  // Fallback, falls marked.js noch nicht bereit ist
+  // Fallback in case marked.js is not ready yet
   return `<pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(withWikilinks)}</pre>`;
 }
 

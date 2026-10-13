@@ -25,11 +25,11 @@ import {
 } from "./dom.js";
 
 // ==========================================
-// 3. Dateiinhalt laden & anzeigen
+// 3. Load & display file content
 // ==========================================
 export async function loadFileContent(filePath) {
   try {
-    // Markiere im Baum
+    // Highlight it in the tree
     document.querySelectorAll(".node-row.active").forEach(el => el.classList.remove("active"));
     const activeEl = document.querySelector(`.node-row[data-path="${CSS.escape(filePath)}"]`);
     if (activeEl) activeEl.classList.add("active");
@@ -40,18 +40,18 @@ export async function loadFileContent(filePath) {
     state.currentFileRawContent = data.raw_content;
     state.currentFileAiSummary = data.ai_summary || "";
 
-    // Chat-Fokus und Kontext-Banner aktualisieren
+    // Update the chat focus and context banner
     if (chatFileContextBanner && chatContextBannerText) {
       chatFileContextBanner.classList.add("active");
-      chatContextBannerText.textContent = `Aktive Notiz: ${data.name || data.path}`;
+      chatContextBannerText.textContent = `Active note: ${data.name || data.path}`;
     }
     if (activeFilePill && activeFilePillText) {
       activeFilePill.classList.add("has-file");
-      activeFilePill.title = `Aktiver Fokus: ${data.path}\nai_map: ${data.ai_summary || "keine Zusammenfassung"}`;
+      activeFilePill.title = `Active focus: ${data.path}\nai_map: ${data.ai_summary || "no summary"}`;
       activeFilePillText.textContent = data.name || data.path.split("/").pop();
     }
 
-    // Header & Breadcrumbs aktualisieren
+    // Update the header & breadcrumbs
     emptyStateEl.style.display = "none";
     fileContainerEl.style.display = "block";
     viewerControlsEl.style.display = "flex";
@@ -59,7 +59,7 @@ export async function loadFileContent(filePath) {
     const segments = data.path.split("/");
     bcFilenameEl.textContent = segments.join(" / ");
     docTitleTextEl.textContent = data.name;
-    docDatesEl.textContent = `Zuletzt geändert: ${data.last_modified || "unbekannt"}`;
+    docDatesEl.textContent = `Last modified: ${data.last_modified || "unknown"}`;
 
     // Tags
     docTagsEl.innerHTML = "";
@@ -72,15 +72,15 @@ export async function loadFileContent(filePath) {
       });
     }
 
-    // KI-Zusammenfassung Box
+    // AI summary box
     if (data.ai_summary) {
       docAiSummaryEl.textContent = data.ai_summary;
     } else {
-      docAiSummaryEl.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">Noch keine Zusammenfassung hinterlegt. Klicke auf das Aktualisieren-Symbol (↻), um eine KI-Zusammenfassung zu generieren.</span>`;
+      docAiSummaryEl.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">No summary stored yet. Click the refresh icon (↻) to generate an AI summary.</span>`;
     }
     docAiBoxEl.style.display = "flex";
 
-    // Verknüpfte Notizen
+    // Linked notes
     docWikilinksListEl.innerHTML = "";
     if (data.linked_files && data.linked_files.length > 0) {
       data.linked_files.forEach(link => {
@@ -96,7 +96,7 @@ export async function loadFileContent(filePath) {
       docWikilinksEl.style.display = "none";
     }
 
-    // Inhalt rendern & im Editor bereitstellen
+    // Render the content & load it into the editor
     docBodyRenderedEl.innerHTML = renderMarkdown(data.body || data.raw_content);
     docBodyRawEl.textContent = data.raw_content;
     if (docBodyEditorEl) {
@@ -104,7 +104,7 @@ export async function loadFileContent(filePath) {
     }
     checkEditorDirty();
 
-    // Klickbare Wikilinks im gerenderten Text verdrahten
+    // Wire up clickable wikilinks in the rendered text
     docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
       linkEl.addEventListener("click", (e) => {
         e.preventDefault();
@@ -113,15 +113,15 @@ export async function loadFileContent(filePath) {
       });
     });
 
-    // Update Chat-Kontext-Pill
+    // Update the chat context pill
     activeFilePill.classList.add("has-file");
     activeFilePillText.textContent = data.name;
     activeFilePill.title = `Aktiver Dokumenten-Fokus: ${data.path}`;
 
-    // Stelle sicher, dass die übergeordneten Ordner im Baum ausgeklappt sind
+    // Make sure the parent folders in the tree are expanded
     ensureFolderVisibleInTree(filePath);
 
   } catch (err) {
-    alert(`Fehler beim Öffnen von ${filePath}: ${err.message}`);
+    alert(`Error opening ${filePath}: ${err.message}`);
   }
 }

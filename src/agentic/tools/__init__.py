@@ -1,5 +1,5 @@
 # src/agentic/tools/__init__.py
-"""Werkzeug-Sammlung (WikiTools) für Agenten."""
+"""Tool collection (WikiTools) for agents."""
 from src.agentic.tools.vault_read import (
     directory_summaries_tool,
     file_summaries_tool,
@@ -23,7 +23,7 @@ from src.agentic.tools.tasks import (
     update_plan_tool,
 )
 
-# Die "Standard-Fähigkeiten", die sowohl Chat- als auch Task-Agent bekommen
+# The "standard capabilities" given to both the chat and the task agent
 CONTENT_TOOLS = [
     files_tool,
     ask_librarian_tool,

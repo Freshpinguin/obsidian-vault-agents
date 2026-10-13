@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 
 from src.routes.frontend import router
 
-# Chat-Frontend: einzelne, self-contained HTML-Datei im Repo-Root (vier Ebenen über dieser Datei)
+# Chat frontend: a single self-contained HTML file in the repository root (four levels above this file)
 FRONTEND_PATH = Path(__file__).resolve().parents[3] / "index.html"
 
 

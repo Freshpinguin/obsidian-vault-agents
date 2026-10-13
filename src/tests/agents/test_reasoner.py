@@ -10,10 +10,10 @@ from src.agentic.agents.reasoner import (
 
 
 def test_reasoner_sends_task_and_config(fake_antigravity):
-    fake_antigravity.reply = "Ausführliche Überlegung."
+    fake_antigravity.reply = "Detailed consideration."
 
     res = run_reasoning("Analysiere das Paradoxon.")
-    assert res == "Ausführliche Überlegung."
+    assert res == "Detailed consideration."
     assert fake_antigravity.prompts == ["Analysiere das Paradoxon."]
 
     # Check config passed
@@ -28,24 +28,24 @@ def test_reasoner_sends_task_and_config(fake_antigravity):
 def test_reasoner_includes_file_paths_as_context(vault: Path, fake_antigravity):
     fake_antigravity.reply = "Antwort mit Kontext."
 
-    res = run_reasoning("Erkläre Technologie", file_paths=["Grundannahmen.md"])
+    res = run_reasoning("Explain the architecture", file_paths=["Overview.md"])
     assert res == "Antwort mit Kontext."
     prompt = fake_antigravity.prompts[0]
-    assert "Erkläre Technologie" in prompt
-    assert "## Kontext aus dem Wiki" in prompt
-    assert "Grundannahmen.md" in prompt
+    assert "Explain the architecture" in prompt
+    assert "## Context from the vault" in prompt
+    assert "Overview.md" in prompt
 
 
 def test_reasoner_empty_response(fake_antigravity):
     fake_antigravity.reply = ""
 
     res = run_reasoning("Leere Frage")
-    assert "Fehler: Der Denk-Agent lieferte keine Antwort." in res
+    assert "Error: the reasoning agent returned no answer." in res
 
 
 def test_reasoner_exception_handled(fake_antigravity):
     fake_antigravity.exc = TimeoutError("Thinking timeout")
 
     res = run_reasoning("Fehlgeschlagene Frage")
-    assert "Fehler: Der Denk-Agent konnte die Aufgabe nicht bearbeiten" in res
+    assert "Error: the reasoning agent could not process the task" in res
     assert "Thinking timeout" in res

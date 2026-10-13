@@ -1,10 +1,10 @@
-# src/agents/reasoner.py
-"""Denk-/Ausarbeitungs-Agent für komplexe Überlegungen und das Ausformulieren längerer
-Texte mit viel Kontext. Läuft, wie der Websuche-Agent (web_search.py), NICHT
-über litellm/WikiAgent/AgentSession, sondern nutzt das Google Antigravity SDK direkt für
-einen einzelnen, nicht-multiturn Aufruf. Ist nur als Tool des Chat-Agenten gedacht: Pfade
-zu Wiki-Dateien können mitgegeben werden, deren Inhalt dann als Kontext in den Prompt
-eingebettet wird."""
+# src/agentic/agents/reasoner.py
+"""Reasoning/drafting agent for complex considerations and for drafting longer texts
+with a lot of context. Like the web search agent (web_search.py), it does NOT run
+through litellm/WikiAgent/AgentSession, but uses the Google Antigravity SDK directly for
+a single, non-multiturn call. It is intended only as a tool of the chat agent: vault
+file paths can be passed along, whose content is then embedded into the prompt as
+context."""
 import asyncio
 import os
 
@@ -13,24 +13,22 @@ from google.antigravity import Agent, LocalAgentConfig, models, types
 from src.core.logging_config import logger
 from src.navigation import load_files
 
-MODEL = "gemini-3.6-flash"  # unterstützt erweitertes Thinking (ThinkingLevel) über dieses SDK
+MODEL = "gemini-3.6-flash"  # supports extended thinking (ThinkingLevel) through this SDK
 
-SYSTEM_INSTRUCTIONS = """Du bist der Denk- und Ausarbeitungs-Agent eines persönlichen
-Science-Fiction-Weltenbau-Wikis. Du wirst für Aufgaben eingesetzt, die viel Kontext und
-gründliches Nachdenken brauchen statt einer schnellen Antwort: komplexe gedankliche
-Ausarbeitungen (z.B. wie ein neues Konzept konsistent in die bestehende Welt passt,
-Konsequenzen zu Ende denken, Widersprüche aufspüren) oder das Ausformulieren längerer,
-kohärenter Texte auf Basis von gegebenem Kontext.
+SYSTEM_INSTRUCTIONS = """You are the reasoning and drafting agent of a personal Obsidian
+knowledge vault. You are used for tasks that need a lot of context and careful thought
+rather than a quick answer: complex reasoning (e.g. how a new concept fits consistently
+into what already exists, thinking consequences through, spotting contradictions) or
+drafting longer, coherent texts on the basis of given context.
 
-Du bekommst die eigentliche Aufgabe sowie optional den Inhalt relevanter Wiki-Dateien als
-Kontext. Behandle diesen Kontext als verlässliche Quelle über das Universum – erfinde
-keine Fakten, die ihm widersprechen, aber ergänze/formuliere gerne aus, wo die Aufgabe das
-verlangt. Du kennst sonst nichts über das Universum außer dem, was dir hier mitgegeben
-wird.
+You receive the actual task and, optionally, the content of relevant vault files as
+context. Treat that context as the reliable source about the subject matter - do not
+invent facts that contradict it, but do feel free to extend and elaborate where the task
+calls for it. You know nothing else about the subject beyond what is given to you here.
 
-Arbeite gründlich und in der Tiefe, die die Aufgabe verlangt, und liefere direkt das
-Ergebnis (die ausgearbeitete Antwort bzw. den ausformulierten Text) – keine Rückfragen,
-keine Meta-Kommentare über die Aufgabe selbst."""
+Work thoroughly and to the depth the task requires, and deliver the result directly (the
+worked-out answer or the drafted text) - no follow-up questions, no meta-commentary about
+the task itself."""
 
 
 def _build_config() -> LocalAgentConfig:
@@ -44,10 +42,10 @@ def _build_config() -> LocalAgentConfig:
                 options=models.GeminiModelOptions(thinking_level=models.ThinkingLevel.HIGH),
             ),
         ),
-        # Reiner Text-Aufruf: keine Agenten-Werkzeuge (Dateisystem, Shell, Websuche, ...)
-        # anbieten, das hier ist kein autonomer Coding-/Browsing-Agent. workspaces=[]
-        # verhindert zusätzlich, dass der Harness einen lokalen Arbeitsordner-Kontext
-        # (und damit absolute Host-Pfade) in die Antwort einstreut.
+        # Pure text call: offer no agent tools (filesystem, shell, web search, ...) -
+        # this is not an autonomous coding/browsing agent. workspaces=[] additionally
+        # prevents the harness from sprinkling a local working-directory context (and
+        # with it absolute host paths) into the response.
         capabilities=types.CapabilitiesConfig(enabled_tools=[]),
         workspaces=[],
         system_instructions=SYSTEM_INSTRUCTIONS,
@@ -57,7 +55,7 @@ def _build_config() -> LocalAgentConfig:
 async def _run_reasoning_async(task: str, file_paths: list[str]) -> str:
     context_block = ""
     if file_paths:
-        context_block = "\n\n## Kontext aus dem Wiki\n\n" + load_files(file_paths)
+        context_block = "\n\n## Context from the vault\n\n" + load_files(file_paths)
 
     async with Agent(_build_config()) as agent:
         response = await agent.chat(f"{task}{context_block}")
@@ -65,19 +63,18 @@ async def _run_reasoning_async(task: str, file_paths: list[str]) -> str:
 
 
 def run_reasoning(task: str, file_paths: list[str] | None = None) -> str:
-    """Führt eine einzelne, nicht-multiturn Denk-/Ausarbeitungsanfrage aus (z.B. als
-    Tool des Chat-Agenten). Gibt bei Fehlern einen les- und nutzbaren Fehlertext statt
-    einer Exception zurück, damit ein aufrufender Agent das Ergebnis direkt als
-    Tool-Antwort verwenden kann."""
+    """Runs a single, non-multiturn reasoning/drafting request (e.g. as a tool of the
+    chat agent). On failure it returns readable, usable error text instead of raising,
+    so a calling agent can use the result directly as a tool response."""
     try:
         text = asyncio.run(_run_reasoning_async(task, file_paths or []))
     except Exception as e:
-        logger.error(f"[Reasoner] Antigravity-Aufruf fehlgeschlagen: {e}")
-        return f"Fehler: Der Denk-Agent konnte die Aufgabe nicht bearbeiten ({e})."
+        logger.error(f"[Reasoner] Antigravity call failed: {e}")
+        return f"Error: the reasoning agent could not process the task ({e})."
 
     if not text:
-        logger.warning("[Reasoner] Leere Antwort vom Antigravity-Agenten erhalten.")
-        return "Fehler: Der Denk-Agent lieferte keine Antwort."
+        logger.warning("[Reasoner] Received an empty response from the Antigravity agent.")
+        return "Error: the reasoning agent returned no answer."
 
-    logger.info("[Reasoner] Aufgabe bearbeitet.")
+    logger.info("[Reasoner] Task processed.")
     return text

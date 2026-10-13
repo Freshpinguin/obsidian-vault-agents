@@ -8,13 +8,13 @@ from src.tests.fakes.fake_llm import FakeLLM, final
 @pytest.mark.parametrize(
     "message, expected_substr",
     [
-        ("Erstelle ein File unter dem Ordner Kulturen mit dem Inhalt abc", "Kulturen"),
-        ("Leg mir bitte unter Technologie/Waffen eine Datei Laser.md an: 'Laser sind heiß'", "Laser.md"),
-        ("Neue Notiz in Ären/Frühzeit namens Übersicht mit Inhalt Vorgeschichte", "Ären/Frühzeit"),
+        ("Create a file in the Meetings folder with the content abc", "Meetings"),
+        ("Please add a file Cache.md under Architecture/Runtime: 'the cache is in-process'", "Cache.md"),
+        ("New note in Reviews/Q1 called Summary with the content Background", "Reviews/Q1"),
     ],
 )
 def test_create_file_intent_reaches_chat_llm(vault: Path, fake_llm: FakeLLM, message: str, expected_substr: str):
-    fake_llm.script("Chat", final({"reply": "Wird erledigt"}))
+    fake_llm.script("Chat", final({"reply": "On it"}))
     start_wiki_chat(message)
 
     calls = fake_llm.calls_for("Chat")
@@ -28,39 +28,39 @@ def test_create_file_intent_reaches_chat_llm(vault: Path, fake_llm: FakeLLM, mes
     assert "path" in schema["parameters"]["properties"]
     assert "content" in schema["parameters"]["properties"]
 
-    assert "## Aktuelle Vault-Übersicht (ai_map)" in call.system_prompt
+    assert "## Current vault overview (ai_map)" in call.system_prompt
 
 
 def test_active_file_header_prepended_to_user_message(vault: Path, fake_llm: FakeLLM):
-    fake_llm.script("Chat", final({"reply": "Gesehen"}))
+    fake_llm.script("Chat", final({"reply": "Noted"}))
     start_wiki_chat(
-        "Füge hier einen Abschnitt hinzu",
-        active_file="Grundannahmen.md",
-        active_file_summary="Physikalische Regeln",
+        "Add a section here",
+        active_file="Overview.md",
+        active_file_summary="Project goals and milestones",
     )
 
     call = fake_llm.calls_for("Chat")[0]
-    assert "[Im Editor geöffnete Notiz: Grundannahmen.md" in call.last_user_message
-    assert "Physikalische Regeln" in call.last_user_message
-    assert "Füge hier einen Abschnitt hinzu" in call.last_user_message
+    assert "[Note open in editor: Overview.md" in call.last_user_message
+    assert "Project goals and milestones" in call.last_user_message
+    assert "Add a section here" in call.last_user_message
 
 
 @pytest.mark.parametrize(
     "intent_message, required_tools",
     [
-        ("Bearbeite Grundannahmen.md und ergänze Relativität", ["edit_file"]),
-        ("Verschiebe Kulturen/Beispielvolk.md nach Archiv/Alt.md", ["move_file"]),
-        ("Lösche die Notiz Technologie/Antriebe.md", ["delete_file"]),
-        ("Was weiß der Vault über die Gasgeborenen?", ["load_files", "ask_librarian"]),
-        ("Ist der Alcubierre-Antrieb in echter Physik realistisch?", ["web_search"]),
-        ("Denk gründlich über die gesellschaftlichen Folgen nach", ["deep_reasoning"]),
-        ("Starte eine Hintergrund-Recherche zu allen Alien-Spezies", ["start_background_task", "check_task_status"]),
+        ("Edit Overview.md and add a risks section", ["edit_file"]),
+        ("Move Meetings/Weekly-Sync.md to Archive/Old.md", ["move_file"]),
+        ("Delete the note Architecture/Data-Pipeline.md", ["delete_file"]),
+        ("What does the vault say about the deployment process?", ["load_files", "ask_librarian"]),
+        ("Is daily batch ingestion still considered good practice?", ["web_search"]),
+        ("Think carefully about the long-term consequences of this schema choice", ["deep_reasoning"]),
+        ("Start a background task that reviews every meeting note", ["start_background_task", "check_task_status"]),
     ],
 )
 def test_various_user_intents_reach_chat_llm_with_matching_tools(
     vault: Path, fake_llm: FakeLLM, intent_message: str, required_tools: list[str]
 ):
-    fake_llm.script("Chat", final({"reply": "Verstanden"}))
+    fake_llm.script("Chat", final({"reply": "Understood"}))
     start_wiki_chat(intent_message)
 
     call = fake_llm.calls_for("Chat")[0]

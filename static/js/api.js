@@ -75,7 +75,7 @@ export async function postChatMessage(payload, sessionId, onStatus) {
   });
   if (!res.ok) {
     const errJson = await res.json().catch(() => ({}));
-    const err = new Error(errJson.detail || `Fehler (${res.status}).`);
+    const err = new Error(errJson.detail || `Error (${res.status}).`);
     err.status = res.status;
     err.detail = errJson.detail;
     throw err;
@@ -94,7 +94,7 @@ export async function postChatMessage(payload, sessionId, onStatus) {
       buffer += decoder.decode(value, { stream: true });
 
       const parts = buffer.split("\n\n");
-      buffer = parts.pop(); // unvollständiger Rest
+      buffer = parts.pop(); // incomplete remainder
 
       for (const block of parts) {
         for (const line of block.split("\n")) {
@@ -106,13 +106,13 @@ export async function postChatMessage(payload, sessionId, onStatus) {
               } else if (event.type === "done") {
                 finalData = event;
               } else if (event.type === "error") {
-                const err = new Error(event.detail || "Fehler beim Chat-Stream");
+                const err = new Error(event.detail || "Error in the chat stream");
                 err.detail = event.detail;
                 throw err;
               }
             } catch (jsonErr) {
               if (jsonErr.detail) throw jsonErr;
-              console.warn("Konnte SSE Event nicht parsen:", line, jsonErr);
+              console.warn("Could not parse SSE event:", line, jsonErr);
             }
           }
         }

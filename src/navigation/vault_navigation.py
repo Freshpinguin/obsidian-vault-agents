@@ -1,13 +1,12 @@
 # src/navigation/vault_navigation.py
-"""Navigations-Werkzeuge für den Librarian-Agenten.
+"""Navigation tools for the librarian agent.
 
-Ausgegeben wird immer der vollständige Vault-Pfad, d.h. der Pfad ab dem
-data-Verzeichnis (z.B. "Technologie/Militärtechnik/Sensoren, Ortung und Tarnung.md").
-Entgegengenommen wird dagegen absichtlich viel mehr: Ein Pfad muss nicht exakt
-stimmen, damit ein Aufruf gelingt (siehe _resolve). Der Agent kann also auch mit
-einem bloßen Dateinamen, einer anderen Groß-/Kleinschreibung oder einem
-unvollständigen Pfad arbeiten und bekommt in der Antwort den kanonischen Pfad
-zurück, mit dem er weiternavigieren kann.
+What is returned is always the full vault path, i.e. the path relative to the
+data directory (e.g. "Reference/Glossary/Terms and Abbreviations.md").
+What is accepted, by contrast, is deliberately much more permissive: a path does
+not have to match exactly for a call to succeed (see _resolve). An agent can
+therefore work with a bare file name, different capitalization or an incomplete
+path, and gets the canonical path back in the response to keep navigating with.
 """
 import difflib
 import json
@@ -20,32 +19,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.core.obsidian_processor import FRONTMATTER_PATTERN, is_summarizable_path
+from src.core.obsidian_processor import FRONTMATTER_PATTERN, PENDING_SUMMARY_TEXT, is_summarizable_path
 from src.core.logging_config import logger
-
-PENDING_SUMMARY_TEXT = "Zusammenfassung ausstehend..."
 
 VAULT_ROOT = Path(os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")).resolve()
 
-# Vault-Root-Bezeichner, die ein Agent einem Pfad voranstellen könnte
-# ("/app/data/Technologie", "data/Technologie", "./vault/Technologie", ...)
+# Vault root identifiers an agent might prepend to a path
+# ("/app/data/Reference", "data/Reference", "./vault/Reference", ...)
 ROOT_ALIASES = {"app", "data", "data.example", "vault", "wiki", "obsidian"}
 
-# Wie viele Alternativen bei mehrdeutiger Eingabe genannt werden
+# How many alternatives to list when the input is ambiguous
 MAX_SUGGESTIONS = 8
 
-# Umlaut-Umschreibungen (ä -> ae), damit "Militaertechnik" den Ordner
-# "Militärtechnik" findet. ß deckt bereits casefold() ab.
+# Umlaut transliterations (ä -> ae), so that an ASCII spelling such as
+# "Jahresuebersicht" finds the folder "Jahresübersicht". casefold() already covers ß.
 UMLAUT_MAP = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "æ": "ae", "ø": "oe", "å": "aa"})
 
-# Ab welcher Ähnlichkeit ein Name als Tippfehler-Treffer gilt (letzte Suchstufe)
+# The similarity above which a name counts as a typo match (final search stage)
 TYPO_THRESHOLD = 0.8
 
 
 class VaultPathError(ValueError):
-    """Ein Pfad konnte im Vault nicht (eindeutig) aufgelöst werden.
+    """A path could not be resolved (unambiguously) within the vault.
 
-    'candidates' ist bei mehrdeutigen Eingaben mit den möglichen Vault-Pfaden gefüllt.
+    For ambiguous input, 'candidates' holds the possible vault paths.
     """
 
     def __init__(self, message: str, candidates: list[str] | None = None):
@@ -58,30 +55,30 @@ def _vault_root(vault_root: Path | None = None) -> Path:
 
 
 def _norm(text: str) -> str:
-    """Vereinheitlicht Schreibweise für den Vergleich: Unicode-Normalform (wichtig
-    bei Umlauten, die je nach Sync-Quelle als NFC oder NFD im Dateisystem landen),
-    Slash-Richtung, Groß-/Kleinschreibung und umgebende Slashes."""
+    """Normalizes spelling for comparison: Unicode normal form (important for
+    umlauts, which land in the filesystem as NFC or NFD depending on the sync
+    source), slash direction, capitalization and surrounding slashes."""
     text = unicodedata.normalize("NFC", str(text)).replace("\\", "/").strip()
     return text.strip("/").casefold()
 
 
 def _fold(text: str) -> str:
-    """Wie _norm, zusätzlich ohne Umlaute und Akzente ("Militärtechnik" ->
-    "militaertechnik"), damit auch ASCII-Umschreibungen eines Namens treffen."""
+    """Like _norm, additionally without umlauts and accents ("Jahresübersicht" ->
+    "jahresuebersicht"), so that ASCII transliterations of a name match too."""
     folded = _norm(text).translate(UMLAUT_MAP)
     decomposed = unicodedata.normalize("NFKD", folded)
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
 def _vault_path(target: Path, vault_root: Path | None = None) -> str:
-    """Vollständiger Pfad ausgehend vom data-Verzeichnis, POSIX-Schreibweise."""
+    """Full path relative to the data directory, in POSIX notation."""
     root = _vault_root(vault_root).resolve()
     rel = target.resolve().relative_to(root).as_posix()
     return rel if rel != "." else ""
 
 
 def _candidate_paths(root: Path, expect: str | None) -> list[Path]:
-    """Alle in Frage kommenden Einträge des Vaults (Ordner bzw. Markdown-Dateien)."""
+    """All eligible vault entries (folders or Markdown files)."""
     candidates: list[Path] = []
     if expect != "file":
         candidates.append(root)
@@ -92,26 +89,26 @@ def _candidate_paths(root: Path, expect: str | None) -> list[Path]:
             if expect != "file":
                 candidates.append(entry)
         elif entry.suffix == ".md" and expect != "dir":
-            # explizit angefragte .index.md/.ai_map-Nachbarn sind über den
-            # direkten Pfad erreichbar; für die Suche zählen echte Notizen.
+            # Explicitly requested .index.md/.ai_map neighbours are reachable via
+            # the direct path; only real notes count for the search.
             if is_summarizable_path(entry):
                 candidates.append(entry)
     return candidates
 
 
 def _strip_root_prefix(segments: list[str]) -> list[str]:
-    """Entfernt vorangestellte Root-Bezeichner wie "app/data/" oder "data/"."""
+    """Removes leading root identifiers such as "app/data/" or "data/"."""
     while len(segments) > 1 and _norm(segments[0]) in ROOT_ALIASES:
         segments = segments[1:]
     return segments
 
 
 def _fuzzy_resolve(raw: str, root: Path, expect: str | None) -> Path:
-    """Sucht den passenden Vault-Eintrag, wenn der Pfad nicht wortwörtlich existiert.
+    """Finds the matching vault entry when the path does not exist literally.
 
-    Stufenweise von streng nach tolerant; die erste Stufe mit genau einem Treffer
-    gewinnt. Mehrere Treffer melden die Alternativen, damit der Agent nachschärfen
-    kann, statt stillschweigend die falsche Datei zu bekommen.
+    Staged from strict to tolerant; the first stage with exactly one hit wins.
+    Multiple hits report the alternatives so the agent can narrow things down
+    instead of silently getting the wrong file.
     """
     segments = _strip_root_prefix([s for s in _norm(raw).split("/") if s not in ("", ".")])
     if not segments:
@@ -120,7 +117,7 @@ def _fuzzy_resolve(raw: str, root: Path, expect: str | None) -> Path:
     needle = "/".join(segments)
     tail = segments[-1]
     tail_stem = tail[:-3] if tail.endswith(".md") else tail
-    # Suchbegriffe mit und ohne .md-Endung, jeweils normalisiert und umlaut-gefaltet
+    # Search terms with and without the .md suffix, each normalized and umlaut-folded
     needles = {needle, f"{needle}.md"} if not needle.endswith(".md") else {needle, needle[:-3]}
     needles_folded = {_fold(n) for n in needles}
     tail_folded = _fold(tail_stem)
@@ -132,21 +129,21 @@ def _fuzzy_resolve(raw: str, root: Path, expect: str | None) -> Path:
     ]
 
     stages = [
-        # 1. vollständiger Pfad, ggf. mit ergänzter/entfernter .md-Endung
+        # 1. full path, with the .md suffix optionally added or removed
         lambda vp, stem, vp_f, stem_f: vp in needles,
-        # 2. Pfad-Ende: "Militärtechnik/Sensoren..." findet den Eintrag darunter
+        # 2. path tail: "Glossary/Terms..." finds the entry below it
         lambda vp, stem, vp_f, stem_f: any(vp.endswith(f"/{n}") for n in needles),
-        # 3. reiner Name/Stem: "Sensoren, Ortung und Tarnung"
+        # 3. bare name/stem: "Terms and Abbreviations"
         lambda vp, stem, vp_f, stem_f: stem == tail_stem,
-        # 4. wie 1-3, aber umlaut-gefaltet: "technologie/militaertechnik"
+        # 4. like 1-3, but umlaut-folded: "technologie/militaertechnik"
         lambda vp, stem, vp_f, stem_f: (
             vp_f in needles_folded
             or any(vp_f.endswith(f"/{n}") for n in needles_folded)
             or stem_f == tail_folded
         ),
-        # 5. Teilstring im Namen: "Sensoren"
+        # 5. substring in the name: "Terms"
         lambda vp, stem, vp_f, stem_f: tail_stem in stem or tail_folded in stem_f,
-        # 6. Teilstring irgendwo im Pfad
+        # 6. substring anywhere in the path
         lambda vp, stem, vp_f, stem_f: needle in vp or tail_folded in vp_f,
     ]
 
@@ -157,7 +154,7 @@ def _fuzzy_resolve(raw: str, root: Path, expect: str | None) -> Path:
         if len(hits) > 1:
             raise _ambiguous(raw, hits, root)
 
-    # 7. letzte Stufe: Tippfehler im Namen über Ähnlichkeit abfangen
+    # 7. final stage: catch typos in the name via similarity
     scored = [
         (difflib.SequenceMatcher(None, tail_folded, stem_f).ratio(), c)
         for c, vp, stem, vp_f, stem_f in entries
@@ -169,31 +166,31 @@ def _fuzzy_resolve(raw: str, root: Path, expect: str | None) -> Path:
             raise _ambiguous(raw, near_best, root)
         return best[1]
 
-    kind = {"dir": "Kein Ordner", "file": "Keine Datei"}.get(expect, "Kein Eintrag")
+    kind = {"dir": "No folder", "file": "No file"}.get(expect, "No entry")
     raise VaultPathError(
-        f"{kind} zu '{raw}' im Vault gefunden. "
-        f"load_ai_map() listet alle vorhandenen Pfade."
+        f"{kind} matching '{raw}' found in the vault. "
+        f"load_ai_map() lists all existing paths."
     )
 
 
 def _ambiguous(raw: str, hits: list[Path], root: Path) -> VaultPathError:
-    """Fehler mit Auswahlliste, damit der Agent nachschärfen kann, statt
-    stillschweigend den falschen Eintrag zu bekommen."""
-    options = sorted(_vault_path(h, root) or "(Vault-Root)" for h in hits)
+    """Error with a list of options, so the agent can narrow things down instead
+    of silently getting the wrong entry."""
+    options = sorted(_vault_path(h, root) or "(vault root)" for h in hits)
     shown = ", ".join(f"'{o}'" for o in options[:MAX_SUGGESTIONS])
-    more = f" (+{len(options) - MAX_SUGGESTIONS} weitere)" if len(options) > MAX_SUGGESTIONS else ""
+    more = f" (+{len(options) - MAX_SUGGESTIONS} more)" if len(options) > MAX_SUGGESTIONS else ""
     return VaultPathError(
-        f"'{raw}' ist nicht eindeutig. Gemeint sein könnte: {shown}{more}. "
-        f"Bitte mit dem vollständigen Vault-Pfad erneut anfragen.",
+        f"'{raw}' is ambiguous. It could mean: {shown}{more}. "
+        f"Please ask again using the full vault path.",
         candidates=options,
     )
 
 
 def _direct_path(raw: str, root: Path) -> Path | None:
-    """Wortwörtliche Auflösung: Vault-Pfad, führender Slash, Backslashes oder ein
-    absoluter Pfad im Vault. Gibt None zurück, wenn das nichts Existierendes
-    innerhalb des Vaults trifft — Pfade, die herausführen ("../../etc/passwd"),
-    werden hier verworfen und tauchen auch in der Fuzzy-Suche nie auf."""
+    """Literal resolution: vault path, leading slash, backslashes or an absolute
+    path inside the vault. Returns None if that does not hit anything existing
+    inside the vault - paths leading outside ("../../etc/passwd") are discarded
+    here and never show up in the fuzzy search either."""
     candidate = Path(raw)
     if not candidate.is_absolute():
         candidate = root / raw.lstrip("/")
@@ -209,21 +206,22 @@ def _direct_path(raw: str, root: Path) -> Path | None:
 
 
 def _resolve(path: str | Path, vault_root: Path | None = None, expect: str | None = None) -> Path:
-    """Löst eine Pfad-Angabe in einen echten Pfad im Dateisystem auf.
+    """Resolves a path specification into a real path on the filesystem.
 
-    Zuerst wortwörtlich (siehe _direct_path); trifft das nichts Passendes, übernimmt
-    _fuzzy_resolve die tolerante Suche (Teilpfad, bloßer Dateiname, andere
-    Groß-/Kleinschreibung, fehlende .md-Endung, Umlaut-Umschreibung, Tippfehler).
+    First literally (see _direct_path); if that hits nothing suitable,
+    _fuzzy_resolve takes over with the tolerant search (partial path, bare file
+    name, different capitalization, missing .md suffix, umlaut transliteration,
+    typos).
 
-    'expect' schränkt auf "dir" bzw. "file" ein und macht die Suche damit treffsicherer.
-    Ergebnis ist immer ein existierender Eintrag innerhalb des Vaults.
+    'expect' restricts to "dir" or "file" and makes the search more accurate.
+    The result is always an existing entry inside the vault.
     """
     root = _vault_root(vault_root).resolve()
     raw = unicodedata.normalize("NFC", str(path)).replace("\\", "/").strip()
 
     if raw.strip("/") in ("", "."):
         if expect == "file":
-            raise VaultPathError("Für eine Datei wird ein Pfad benötigt, nicht der Vault-Root.")
+            raise VaultPathError("A file requires a path, not the vault root.")
         return root
 
     direct = _direct_path(raw, root)
@@ -234,16 +232,16 @@ def _resolve(path: str | Path, vault_root: Path | None = None, expect: str | Non
             return direct
 
     target = _fuzzy_resolve(raw, root, expect)
-    logger.info(f"[Navigation] Pfad '{path}' aufgelöst zu '{_vault_path(target, root)}'")
+    logger.info(f"[Navigation] Path '{path}' resolved to '{_vault_path(target, root)}'")
     return target
 
 
 def _resolve_any(path: str | Path, vault_root: Path | None = None, prefer: str = "file") -> Path:
-    """Wie _resolve, aber ohne feste Erwartung: Ein wortwörtlich existierender Pfad
-    gewinnt immer (auch wenn er der jeweils andere Typ ist), danach wird der
-    bevorzugte Typ gesucht und erst zuletzt der andere. So schlägt der Ordner
-    "Technologie" die Datei "Computertechnologie und Zielunterstützung.md",
-    während ein bloßer Dateiname weiterhin gefunden wird.
+    """Like _resolve, but without a fixed expectation: a literally existing path
+    always wins (even if it is the other type), then the preferred type is
+    searched for, and only last the other one. That way the folder "Reference"
+    beats the file "Reference Architecture Notes.md", while a bare file name is
+    still found.
     """
     root = _vault_root(vault_root).resolve()
     raw = unicodedata.normalize("NFC", str(path)).replace("\\", "/").strip()
@@ -262,12 +260,12 @@ def _resolve_any(path: str | Path, vault_root: Path | None = None, prefer: str =
         try:
             return _resolve(path, root, expect=other)
         except VaultPathError as other_error:
-            # Eine Auswahlliste hilft dem Agenten mehr als ein bloßes "nicht gefunden".
+            # A list of options helps the agent more than a bare "not found".
             raise other_error if other_error.candidates else prefer_error
 
 
 def _read_md(filepath: Path) -> tuple[dict, str]:
-    """Liest eine Markdown-Datei und trennt Frontmatter und Inhalt."""
+    """Reads a Markdown file and separates frontmatter from content."""
     if not filepath.exists():
         return {}, ""
 
@@ -279,34 +277,34 @@ def _read_md(filepath: Path) -> tuple[dict, str]:
     try:
         return yaml.safe_load(match.group(1)) or {}, match.group(2).strip()
     except yaml.YAMLError as e:
-        logger.error(f"[Navigation] YAML Parse-Fehler in {filepath}: {e}")
+        logger.error(f"[Navigation] YAML parse error in {filepath}: {e}")
         return {}, content.strip()
 
 
 def _strip_frontmatter(text: str) -> str:
-    """Entfernt ein eventuell vorhandenes YAML-Frontmatter (---...---) vom Anfang eines
-    Textes und gibt nur den Inhalt darunter zurück. No-Op, wenn keins vorhanden ist.
-    Wird auch defensiv auf Agenten-Eingaben angewendet (siehe vault_mutation.edit_file),
-    damit ein versehentlich mitgeschicktes altes Frontmatter nicht doppelt landet."""
+    """Removes any YAML frontmatter (---...---) from the beginning of a text and
+    returns only the content below it. A no-op if there is none. Also applied
+    defensively to agent input (see vault_mutation.edit_file), so that stale
+    frontmatter sent along by accident does not end up duplicated."""
     match = FRONTMATTER_PATTERN.match(text)
     return match.group(2).strip() if match else text.strip()
 
 
 def load_ai_map(vault_root: Path | None = None) -> dict:
-    """Gibt den Inhalt der zentralen .ai_map.json zurück.
+    """Returns the contents of the central .ai_map.json.
 
-    Struktur: {"directories": {vault_pfad: kurz_summary}, "files": {vault_pfad: kurz_summary}}
+    Structure: {"directories": {vault_path: short_summary}, "files": {vault_path: short_summary}}
     """
     ai_map_path = _vault_root(vault_root) / ".ai_map.json"
     if not ai_map_path.exists():
-        logger.error(f"[Navigation] .ai_map.json nicht gefunden: {ai_map_path}")
+        logger.error(f"[Navigation] .ai_map.json not found: {ai_map_path}")
         return {"directories": {}, "files": {}}
 
     try:
         with open(ai_map_path, "r", encoding="utf-8") as f:
             ai_map = json.load(f)
     except json.JSONDecodeError as e:
-        logger.error(f"[Navigation] .ai_map.json ist ungültig: {e}")
+        logger.error(f"[Navigation] .ai_map.json is invalid: {e}")
         return {"directories": {}, "files": {}}
 
     ai_map.setdefault("directories", {})
@@ -315,36 +313,36 @@ def load_ai_map(vault_root: Path | None = None) -> dict:
 
 
 def load_directory_summary(path: str | Path, vault_root: Path | None = None) -> str:
-    """Gibt die ausführliche Zusammenfassung eines Ordners (ai_summary der .index.md)
-    zusammen mit den Kurz-Zusammenfassungen aller enthaltenen Dateien und Unterordner
-    zurück. Jede Zeile nennt den vollständigen Vault-Pfad des Eintrags.
+    """Returns the detailed summary of a folder (the ai_summary of its .index.md)
+    together with the short summaries of all contained files and subfolders.
+    Every line names the full vault path of the entry.
 
-    Der Pfad muss nicht exakt stimmen (siehe _resolve); zeigt er auf eine Datei,
-    wird deren Ordner ausgegeben.
+    The path does not have to match exactly (see _resolve); if it points at a
+    file, that file's folder is returned.
     """
     root = _vault_root(vault_root)
     hint = ""
     try:
         target = _resolve_any(path, root, prefer="dir")
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
-    # Zeigt die Angabe auf eine Datei, ist der Ordner darüber die sinnvollste Antwort.
+    # If the input points at a file, the folder above it is the most useful answer.
     folder = target if target.is_dir() else target.parent
     if not target.is_dir():
-        hint = f"> Hinweis: '{path}' ist die Datei '{_vault_path(target, root)}' — unten steht ihr Ordner.\n"
+        hint = f"> Note: '{path}' is the file '{_vault_path(target, root)}' — its folder is shown below.\n"
 
     ai_map = load_ai_map(root)
     files_map = ai_map["files"]
     dirs_map = ai_map["directories"]
 
     index_fm, _ = _read_md(folder / ".index.md")
-    folder_label = _vault_path(folder, root) or "(Vault-Root)"
+    folder_label = _vault_path(folder, root) or "(vault root)"
 
     sections = [
-        f"{hint}# Ordner: {folder_label}",
+        f"{hint}# Folder: {folder_label}",
         "",
-        "## Zusammenfassung",
+        "## Summary",
         index_fm.get("ai_summary", PENDING_SUMMARY_TEXT),
     ]
 
@@ -360,25 +358,25 @@ def load_directory_summary(path: str | Path, vault_root: Path | None = None) -> 
             summary = files_map.get(entry_path, PENDING_SUMMARY_TEXT)
             file_lines.append(f"- `{entry_path}` — {summary}")
 
-    sections += ["", "## Dateien in diesem Ordner"]
-    sections += file_lines or ["(keine)"]
-    sections += ["", "## Unterordner"]
-    sections += dir_lines or ["(keine)"]
+    sections += ["", "## Files in this folder"]
+    sections += file_lines or ["(none)"]
+    sections += ["", "## Subfolders"]
+    sections += dir_lines or ["(none)"]
 
     return "\n".join(sections)
 
 
 def load_file_summary(path: str | Path, vault_root: Path | None = None) -> str:
-    """Gibt die ai_summary einer Datei zurück (aus deren YAML-Frontmatter).
+    """Returns a file's ai_summary (from its YAML frontmatter).
 
-    Der Pfad muss nicht exakt stimmen (siehe _resolve); zeigt er auf einen Ordner,
-    kommt dessen Zusammenfassung aus der .index.md zurück.
+    The path does not have to match exactly (see _resolve); if it points at a
+    folder, that folder's summary from .index.md is returned.
     """
     root = _vault_root(vault_root)
     try:
         target = _resolve_any(path, root, prefer="file")
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if target.is_dir():
         target = target / ".index.md"
@@ -388,59 +386,59 @@ def load_file_summary(path: str | Path, vault_root: Path | None = None) -> str:
 
 
 def load_file(path: str | Path, vault_root: Path | None = None) -> str:
-    """Lädt den Inhalt einer Datei aus dem Vault OHNE das YAML-Frontmatter – das ist nur
-    für load_file_summary/load_directory_summary relevant, nicht für den eigentlichen
-    Dokumenteninhalt (und darf insbesondere nicht ungefiltert an edit_file zurückgehen,
-    sonst verdoppelt sich das Frontmatter beim nächsten Schreiben).
+    """Loads a file's content from the vault WITHOUT the YAML frontmatter - that is
+    only relevant for load_file_summary/load_directory_summary, not for the actual
+    document content (and in particular must not be passed back to edit_file
+    unfiltered, or the frontmatter would be duplicated on the next write).
 
-    Der Pfad muss nicht exakt stimmen (siehe _resolve); zeigt er auf einen Ordner,
-    kommt der Inhalt von dessen .index.md zurück.
+    The path does not have to match exactly (see _resolve); if it points at a
+    folder, the content of its .index.md is returned.
     """
     root = _vault_root(vault_root)
     try:
         filepath = _resolve_any(path, root, prefer="file")
     except VaultPathError as e:
-        return f"Fehler: {e}"
+        return f"Error: {e}"
 
     if filepath.is_dir():
         filepath = filepath / ".index.md"
         if not filepath.is_file():
-            return f"Fehler: Ordner '{path}' hat noch keine .index.md."
+            return f"Error: folder '{path}' does not have an .index.md yet."
 
     _, content = _read_md(filepath)
     return content
 
 
 def _batch(paths: list[str], loader) -> str:
-    """Wendet eine der load_*-Funktionen auf mehrere Pfade an und fügt die Ergebnisse
-    mit einer Trennzeile pro Pfad zusammen, damit ein einziger Tool-Aufruf mehrere
-    Ordner/Dateien auf einmal liefern kann, statt sie einzeln nacheinander abzufragen."""
+    """Applies one of the load_* functions to several paths and joins the results
+    with a separator line per path, so that a single tool call can return several
+    folders/files at once instead of querying them one after another."""
     if not paths:
-        return "Fehler: keine Pfade angegeben."
-    return "\n\n".join(f"===== Angefragt: '{p}' =====\n{loader(p)}" for p in paths)
+        return "Error: no paths provided."
+    return "\n\n".join(f"===== Requested: '{p}' =====\n{loader(p)}" for p in paths)
 
 
 def format_ai_map(ai_map: dict[str, dict[str, str]]) -> str:
-    """Formatiert das Ergebnis von load_ai_map() als kompakte Markdown-Übersicht aller
-    Ordner und Dateien mit Kurz-Zusammenfassung – der übliche Recherche-Ausgangspunkt,
-    den Agenten von Anfang an im Kontext bekommen (siehe Librarian, Chat)."""
-    lines = ["## Ordner", ""]
-    lines += [f"- `{path}/` — {summary}" for path, summary in sorted(ai_map["directories"].items())] or ["(keine)"]
-    lines += ["", "## Dateien", ""]
-    lines += [f"- `{path}` — {summary}" for path, summary in sorted(ai_map["files"].items())] or ["(keine)"]
+    """Formats the result of load_ai_map() as a compact Markdown overview of all
+    folders and files with their short summaries - the usual research starting
+    point that agents get in their context from the outset (see Librarian, Chat)."""
+    lines = ["## Folders", ""]
+    lines += [f"- `{path}/` — {summary}" for path, summary in sorted(ai_map["directories"].items())] or ["(none)"]
+    lines += ["", "## Files", ""]
+    lines += [f"- `{path}` — {summary}" for path, summary in sorted(ai_map["files"].items())] or ["(none)"]
     return "\n".join(lines)
 
 
 def load_directory_summaries(paths: list[str], vault_root: Path | None = None) -> str:
-    """Wie load_directory_summary, aber für mehrere Ordner in einem Aufruf."""
+    """Like load_directory_summary, but for several folders in one call."""
     return _batch(paths, lambda p: load_directory_summary(p, vault_root))
 
 
 def load_file_summaries(paths: list[str], vault_root: Path | None = None) -> str:
-    """Wie load_file_summary, aber für mehrere Dateien in einem Aufruf."""
+    """Like load_file_summary, but for several files in one call."""
     return _batch(paths, lambda p: load_file_summary(p, vault_root))
 
 
 def load_files(paths: list[str], vault_root: Path | None = None) -> str:
-    """Wie load_file, aber für mehrere Dateien in einem Aufruf."""
+    """Like load_file, but for several files in one call."""
     return _batch(paths, lambda p: load_file(p, vault_root))

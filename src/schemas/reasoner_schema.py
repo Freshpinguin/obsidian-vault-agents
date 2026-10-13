@@ -4,12 +4,12 @@ from pydantic import BaseModel, Field
 
 class ReasoningArgs(BaseModel):
     task: str = Field(
-        description="Die Aufgabe für den Denk-Agenten: eine komplexe Überlegung oder ein auszuformulierender "
-                     "Text, möglichst konkret und in sich verständlich formuliert (der Agent kennt den bisherigen "
-                     "Chatverlauf nicht, nur das, was hier steht)."
+        description="The task for the reasoning agent: a complex consideration or a text to draft, "
+                     "phrased as concretely and self-containedly as possible (the agent does not know the "
+                     "conversation so far, only what is written here)."
     )
     file_paths: list[str] = Field(
         default_factory=list,
-        description="Optionale Vault-Pfade, deren Inhalt als zusätzlicher Kontext mitgeschickt werden soll "
-                     "(z.B. bestehende Lore-Dateien, auf denen die Ausarbeitung aufbauen soll).",
+        description="Optional vault paths whose content should be sent along as additional context "
+                     "(e.g. existing notes the elaboration should build on).",
     )

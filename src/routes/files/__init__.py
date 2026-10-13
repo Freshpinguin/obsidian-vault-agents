@@ -3,8 +3,8 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/files", tags=["files"])
 
-# Einzelne Routen importieren (registrieren sich auf dem router)
-# Wichtig: Spezifische Pfade wie get_events vor dem Catch-All /{path:path} in get_file_content importieren!
+# Import the individual routes (they register themselves on the router)
+# Important: import specific paths such as get_events BEFORE the catch-all /{path:path} in get_file_content.
 from src.routes.files.get_events import get_events
 from src.routes.files.get_files import get_files
 from src.routes.files.post_summary import post_summary

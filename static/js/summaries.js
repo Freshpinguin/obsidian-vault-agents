@@ -16,7 +16,7 @@ import {
 } from "./dom.js";
 
 // ==========================================
-// KI-Zusammenfassung anfordern (einzelne Datei)
+// Request an AI summary (single file)
 // ==========================================
 export async function requestSummary() {
   if (!state.currentFile || state.isRequestingSummary) return;
@@ -28,12 +28,12 @@ export async function requestSummary() {
   }
 
   docAiBoxEl.style.display = "flex";
-  docAiSummaryEl.innerHTML = `<span style="color: var(--accent-light);">✨ Der Summarizer-Agent analysiert '${escapeHtml(state.currentFile)}' und generiert eine Zusammenfassung…</span>`;
+  docAiSummaryEl.innerHTML = `<span style="color: var(--accent-light);">✨ The summarizer agent is analyzing '${escapeHtml(state.currentFile)}' and generating a summary…</span>`;
 
   try {
     const data = await requestFileSummary(state.currentFile);
 
-    docAiSummaryEl.textContent = data.ai_summary || "Zusammenfassung erfolgreich erstellt.";
+    docAiSummaryEl.textContent = data.ai_summary || "Summary created successfully.";
     state.currentFileAiSummary = data.ai_summary || "";
     if (activeFilePill) {
       activeFilePill.title = `Aktiver Fokus: ${state.currentFile}\nai_map: ${state.currentFileAiSummary}`;
@@ -41,20 +41,20 @@ export async function requestSummary() {
 
     if (data.file) {
       state.currentFileRawContent = data.file.raw_content;
-      docDatesEl.textContent = `Zuletzt geändert: ${data.file.last_modified || "gerade eben"}`;
+      docDatesEl.textContent = `Last modified: ${data.file.last_modified || "just now"}`;
       if (state.viewMode === "raw") {
         docBodyRawEl.textContent = data.file.raw_content;
       }
     }
 
-    // Dateibaum im Hintergrund aktualisieren (für Hover-Zusammenfassungen im Explorer)
+    // Refresh the file tree in the background (for hover summaries in the explorer)
     loadFileTree();
 
-    showToast("✨ KI-Zusammenfassung erfolgreich generiert!");
+    showToast("✨ AI summary generated successfully.");
 
   } catch (err) {
-    docAiSummaryEl.innerHTML = `<span style="color: var(--red);">Fehler: ${escapeHtml(err.message)}</span>`;
-    showToast(`Fehler: ${err.message}`, "error");
+    docAiSummaryEl.innerHTML = `<span style="color: var(--red);">Error: ${escapeHtml(err.message)}</span>`;
+    showToast(`Error: ${err.message}`, "error");
   } finally {
     state.isRequestingSummary = false;
     if (btnRefreshSummaryCallout) {
@@ -69,14 +69,14 @@ if (btnRefreshSummaryCallout) {
 }
 
 // ==========================================
-// Fehlende Zusammenfassungen erstellen (Optionen-Menü)
+// Create missing summaries (options menu)
 // ==========================================
 if (btnBuildMissingSummaries) {
   btnBuildMissingSummaries.addEventListener("click", async () => {
     btnBuildMissingSummaries.disabled = true;
     const origText = btnBuildMissingText ? btnBuildMissingText.textContent : "Fehlende Zusammenfassungen erstellen";
-    if (btnBuildMissingText) btnBuildMissingText.textContent = "Vault wird gescannt & zusammengefasst…";
-    showToast("🚀 Scan gestartet: Fehlende Zusammenfassungen werden erstellt…", "info");
+    if (btnBuildMissingText) btnBuildMissingText.textContent = "Scanning & summarizing the vault…";
+    showToast("🚀 Scan started: creating the missing summaries…", "info");
 
     try {
       const data = await buildMissingSummaries();
@@ -86,7 +86,7 @@ if (btnBuildMissingSummaries) {
         await loadFileContent(state.currentFile);
       }
     } catch (err) {
-      showToast(`Fehler: ${err.message}`, "error");
+      showToast(`Error: ${err.message}`, "error");
     } finally {
       btnBuildMissingSummaries.disabled = false;
       if (btnBuildMissingText) btnBuildMissingText.textContent = origText;

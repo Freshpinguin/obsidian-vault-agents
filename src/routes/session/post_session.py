@@ -7,7 +7,7 @@ from src.routes.session.storage import _sessions, _sessions_lock, reply_or_502, 
 
 @router.post("", response_model=ChatReplyResponse, status_code=201)
 def post_session(body: StartSessionRequest, request: Request):
-    """Erstellt eine neue Chat-Session mit der ersten Nachricht und behält sie im Speicher."""
+    """Creates a new chat session with the first message and keeps it in memory."""
     if "text/event-stream" in request.headers.get("accept", ""):
         return stream_chat_session(
             lambda on_status: start_wiki_chat(

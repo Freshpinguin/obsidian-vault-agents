@@ -1,28 +1,28 @@
-"""Skriptbare, agent-bewusste Attrappe für ``litellm.completion``.
+"""A scriptable, agent-aware fake for ``litellm.completion``.
 
-Alle WikiAgents (Chat, TaskAgent, Librarian, Summarizer, FolderSummarizer) und der
-ContextCompactor rufen ``litellm.completion`` auf. Da Agenten sich gegenseitig aufrufen
-(Chat -> ask_librarian -> Librarian-Session), routet der FakeLLM jeden Aufruf anhand der
-System-Nachricht zum richtigen Agenten und arbeitet für jeden Agenten ein eigenes Skript ab.
+All WikiAgents (Chat, TaskAgent, Librarian, Summarizer, FolderSummarizer) and the
+context compactor call ``litellm.completion``. Since agents call each other
+(Chat -> ask_librarian -> librarian session), the FakeLLM routes every call to the right
+agent based on the system message and works through a separate script per agent.
 
-Beispiel::
+Example::
 
     fake_llm.script("Chat",
-        tool_calls(("create_file", {"path": "Kulturen/Zeta.md", "content": "abc"})),
-        final({"reply": "Datei 'Kulturen/Zeta.md' wurde erstellt."}),
+        tool_calls(("create_file", {"path": "Meetings/Zeta.md", "content": "abc"})),
+        final({"reply": "File 'Meetings/Zeta.md' was created."}),
     )
-    session = start_wiki_chat("Erstelle Kulturen/Zeta.md mit Inhalt abc")
+    session = start_wiki_chat("Create Meetings/Zeta.md with content abc")
     call = fake_llm.calls_for("Chat")[0]
     assert "create_file" in call.tool_names
 
-Ein Skript-Eintrag kann sein:
-- ein Response-Objekt (siehe ``response``/``tool_calls``/``final``/``raw``),
-- eine Exception-Instanz oder -Klasse (wird beim Aufruf geworfen),
-- ein Callable ``(kwargs) -> Response`` für dynamische Antworten.
+A script entry can be:
+- a response object (see ``response``/``tool_calls``/``final``/``raw``),
+- an exception instance or class (raised when called),
+- a callable ``(kwargs) -> Response`` for dynamic responses.
 
-Wichtig: ``_run_turn`` fängt Exceptions aus ``litellm.completion`` ab. Damit ein fehlendes
-Skript nicht unbemerkt als "API-Fehler" durchrutscht, merkt sich der FakeLLM solche
-unerwarteten Aufrufe; die ``fake_llm``-Fixture lässt den Test dann am Ende fehlschlagen.
+Important: ``_run_turn`` catches exceptions from ``litellm.completion``. So that a missing
+script does not slip through unnoticed as an "API error", the FakeLLM records such
+unexpected calls; the ``fake_llm`` fixture then fails the test at the end.
 """
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ def final(data: dict) -> NS:
 
 
 def raw(text: str) -> NS:
-    """Beliebiger Rohtext als Antwort (z.B. ungültiges JSON)."""
+    """Arbitrary raw text as the response (e.g. invalid JSON)."""
     return response(content=text)
 
 
@@ -163,7 +163,7 @@ class FakeLLM:
         self.register("Compactor", COMPACTION_SYSTEM_PROMPT)
 
     def register(self, name: str, system_prompt: str) -> None:
-        """Registriert einen (Test-)Agenten. Später registrierte Agenten gewinnen."""
+        """Registers a (test) agent. Agents registered later win."""
         self._matchers.insert(0, (name, system_prompt))
 
     def identify(self, messages: list[dict]) -> str:
@@ -193,7 +193,7 @@ class FakeLLM:
             self.calls.append(RecordedCall(agent=agent, kwargs=kwargs))
             queue = self._scripts[agent]
             if not queue:
-                msg = f"Unerwarteter LLM-Call für Agent '{agent}' (kein Skript-Eintrag mehr übrig)."
+                msg = f"Unexpected LLM call for agent '{agent}' (no script entries left)."
                 self.unexpected.append(msg)
                 raise AssertionError(msg)
             item = queue.popleft()
@@ -213,14 +213,14 @@ class FakeLLM:
 
     def last_call(self, agent: str) -> RecordedCall:
         calls = self.calls_for(agent)
-        assert calls, f"Kein LLM-Call für Agent '{agent}' aufgezeichnet. Aufgezeichnet: {[c.agent for c in self.calls]}"
+        assert calls, f"No LLM call recorded for agent '{agent}'. Recorded: {[c.agent for c in self.calls]}"
         return calls[-1]
 
     def assert_clean(self) -> None:
-        """Keine unerwarteten Aufrufe und alle geskripteten Antworten verbraucht."""
+        """No unexpected calls, and all scripted responses consumed."""
         assert not self.unexpected, "\n".join(self.unexpected)
         leftovers = {a: len(q) for a, q in self._scripts.items() if q}
-        assert not leftovers, f"Nicht verbrauchte Skript-Antworten: {leftovers}"
+        assert not leftovers, f"Unconsumed scripted responses: {leftovers}"
 
 
 def tool_call_factory(name: str, arguments_fn: Callable[[dict], dict]) -> Callable[[dict], NS]:

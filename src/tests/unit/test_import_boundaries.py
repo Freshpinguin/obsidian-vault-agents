@@ -1,5 +1,5 @@
 # src/tests/unit/test_import_boundaries.py
-"""AST-Scan-Tests zur statischen Durchsetzung von Architekturgrenzen und Fassadenregeln."""
+"""AST scan tests that statically enforce architectural boundaries and facade rules."""
 import ast
 from pathlib import Path
 
@@ -14,7 +14,7 @@ def _get_python_files(directory: Path, exclude_dirs: tuple[str, ...] = ("tests",
 
 
 def _resolve_import_target(node: ast.Import | ast.ImportFrom, file_path: Path) -> list[str]:
-    """Löst Import-Ziele in vollqualifizierte Modulpfade auf (unterstützt relative Importe)."""
+    """Resolves import targets into fully qualified module paths (supports relative imports)."""
     if isinstance(node, ast.Import):
         return [alias.name for alias in node.names]
 
@@ -37,8 +37,8 @@ def _resolve_import_target(node: ast.Import | ast.ImportFrom, file_path: Path) -
 
 
 def test_facade_enforced_outside_agentic():
-    """Außerhalb von src/agentic/ (ohne Tests) darf niemand interne Unterpakete
-    von src.agentic importieren — ausschließlich die Fassade src.agentic ist erlaubt."""
+    """Outside of src/agentic/ (tests excluded), nobody may import internal subpackages
+    of src.agentic - only the src.agentic facade is permitted."""
     violations = []
     forbidden_prefixes = (
         "src.agentic.agents",
@@ -47,7 +47,7 @@ def test_facade_enforced_outside_agentic():
     )
 
     for py_file in _get_python_files(SRC_DIR):
-        # src/agentic überspringen
+        # Skip src/agentic itself
         if "agentic" in py_file.parts:
             continue
 
@@ -65,8 +65,8 @@ def test_facade_enforced_outside_agentic():
 
 
 def test_engine_has_exactly_one_delayed_agent_import():
-    """src/agentic/engine/ darf auf Modul-Ebene nie aus agents oder tools importieren.
-    Funktionslokal ist genau EIN verzögerter Import erlaubt: in jobs.py:53 (_run_job)."""
+    """src/agentic/engine/ may never import from agents or tools at module level.
+    Exactly ONE deferred, function-local import is permitted: in jobs.py (_run_job)."""
     engine_dir = SRC_DIR / "agentic" / "engine"
     top_level_violations = []
     delayed_agent_imports = []
@@ -75,7 +75,7 @@ def test_engine_has_exactly_one_delayed_agent_import():
         content = py_file.read_text(encoding="utf-8")
         tree = ast.parse(content, filename=str(py_file))
 
-        # 1. Top-Level-Knoten prüfen
+        # 1. Check top-level nodes
         for node in tree.body:
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 for target in _resolve_import_target(node, py_file):
@@ -96,9 +96,9 @@ def test_engine_has_exactly_one_delayed_agent_import():
         + "\n".join(top_level_violations)
     )
 
-    # Es darf genau EIN verzögerter Import in jobs.py existieren
+    # Exactly ONE deferred import may exist, in jobs.py
     assert len(delayed_agent_imports) == 1, (
-        f"Erwartet genau 1 verzögerten Import in engine/ (jobs.py), gefunden {len(delayed_agent_imports)}:\n"
+        f"Expected exactly 1 deferred import in engine/ (jobs.py), found {len(delayed_agent_imports)}:\n"
         + "\n".join(f"{f}:{line} -> {target}" for f, line, target in delayed_agent_imports)
     )
     file_name, _, target = delayed_agent_imports[0]
@@ -107,8 +107,8 @@ def test_engine_has_exactly_one_delayed_agent_import():
 
 
 def test_tools_do_not_import_agents_except_delegation():
-    """src/agentic/tools/ darf außer delegation.py (das Agenten-Aufrufe kapselt)
-    nie aus src.agentic.agents importieren. Insbesondere tasks.py darf nicht aus agents importieren."""
+    """Apart from delegation.py (which encapsulates agent calls), src/agentic/tools/ may
+    never import from src.agentic.agents. In particular tasks.py must not import from agents."""
     tools_dir = SRC_DIR / "agentic" / "tools"
     violations = []
 
@@ -123,7 +123,7 @@ def test_tools_do_not_import_agents_except_delegation():
                         violations.append(f"{py_file.name}:{node.lineno} -> {target}")
 
     assert not violations, (
-        f"Werkzeuge in tools/ dürfen außer delegation.py nicht aus agents/ importieren:\n"
+        f"Apart from delegation.py, tools in tools/ must not import from agents/:\n"
         + "\n".join(violations)
     )
 
@@ -143,5 +143,5 @@ def test_schemas_do_not_import_internal_layers():
                         violations.append(f"{py_file.name}:{node.lineno} -> {target}")
 
     assert not violations, (
-        f"Schemas dürfen keine Logikschichten importieren:\n" + "\n".join(violations)
+        f"Schemas must not import logic layers:\n" + "\n".join(violations)
     )

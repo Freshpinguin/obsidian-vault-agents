@@ -32,9 +32,9 @@ def test_task_agent_full_lifecycle(vault: Path, fake_llm: FakeLLM, sync_threads)
     fake_llm.script(
         "TaskAgent",
         update_plan_step1,
-        tool_calls(("create_file", {"path": "Kulturen/TaskOutput.md", "content": "Generiert"})),
+        tool_calls(("create_file", {"path": "Meetings/TaskOutput.md", "content": "Generiert"})),
         update_plan_step2,
-        final({"summary": "Alle Arbeitsschritte erfolgreich ausgeführt."}),
+        final({"summary": "All work steps completed successfully."}),
     )
 
     msg = start_background_task("Erstelle TaskOutput.md und berichte")
@@ -45,22 +45,22 @@ def test_task_agent_full_lifecycle(vault: Path, fake_llm: FakeLLM, sync_threads)
     assert job.status == "done"
     assert len(job.plan) == 2
     assert job.plan[0]["status"] == "done"
-    assert (vault / "Kulturen" / "TaskOutput.md").exists()
+    assert (vault / "Meetings" / "TaskOutput.md").exists()
 
     status_report = check_task_status(tid)
     assert "[x] Erstelle Notiz" in status_report
     assert "[x] Abschluss" in status_report
-    assert "Alle Arbeitsschritte erfolgreich ausgeführt." in status_report
+    assert "All work steps completed successfully." in status_report
 
 
 def test_task_agent_immediate_final_rejected_and_fails_on_exhaustion(fake_llm: FakeLLM, sync_threads):
     # Max retries is 3, so 4 attempts total
     fake_llm.script(
         "TaskAgent",
-        final({"summary": "Halluzinierter Soforterfolg 1"}),
-        final({"summary": "Halluzinierter Soforterfolg 2"}),
-        final({"summary": "Halluzinierter Soforterfolg 3"}),
-        final({"summary": "Halluzinierter Soforterfolg 4"}),
+        final({"summary": "Hallucinateder Soforterfolg 1"}),
+        final({"summary": "Hallucinateder Soforterfolg 2"}),
+        final({"summary": "Hallucinateder Soforterfolg 3"}),
+        final({"summary": "Hallucinateder Soforterfolg 4"}),
     )
 
     start_background_task("Aufgabe ohne Tools")
@@ -69,8 +69,8 @@ def test_task_agent_immediate_final_rejected_and_fails_on_exhaustion(fake_llm: F
 
     assert job.status == "error"
     assert job.error is not None
-    assert "Iterationslimit oder wiederholt ungültige Antwort" in job.error
-    assert "Fehler:" in check_task_status(tid)
+    assert "iteration limit or repeatedly invalid response" in job.error
+    assert "Error:" in check_task_status(tid)
 
 
 def test_task_agent_update_plan_unknown_task_id(fake_llm: FakeLLM, sync_threads):
@@ -85,18 +85,18 @@ def test_task_agent_update_plan_unknown_task_id(fake_llm: FakeLLM, sync_threads)
 
     start_background_task("Aufgabe mit falscher ID")
     call = fake_llm.last_call("TaskAgent")
-    assert "Fehler: Unbekannte task_id 'ghost_tid'" in call.tool_results[0]
+    assert "Error: unknown task_id 'ghost_tid'" in call.tool_results[0]
 
 
 @pytest.mark.parametrize(
     "tool_name, tool_args, expected_result_substr",
     [
-        ("load_files", {"paths": ["Grundannahmen.md"]}, "Grundannahmen.md"),
-        ("create_directory", {"path": "TaskDir"}, "erstellt"),
-        ("create_file", {"path": "TaskDir/Note.md", "content": "Note"}, "erstellt"),
-        ("edit_file", {"path": "Grundannahmen.md", "content": "New"}, "aktualisiert"),
-        ("move_file", {"path": "Grundannahmen.md", "new_path": "GrundNeu.md"}, "verschoben"),
-        ("delete_file", {"path": "Kulturen/Beispielvolk.md"}, "gelöscht"),
+        ("load_files", {"paths": ["Overview.md"]}, "Overview.md"),
+        ("create_directory", {"path": "TaskDir"}, "was created"),
+        ("create_file", {"path": "TaskDir/Note.md", "content": "Note"}, "was created"),
+        ("edit_file", {"path": "Overview.md", "content": "New"}, "was updated"),
+        ("move_file", {"path": "Overview.md", "new_path": "OverviewNew.md"}, "moved"),
+        ("delete_file", {"path": "Meetings/Weekly-Sync.md"}, "was deleted"),
     ],
 )
 def test_task_agent_content_tools_execution(
@@ -110,7 +110,7 @@ def test_task_agent_content_tools_execution(
         "TaskAgent",
         update_plan_fn,
         tool_calls((tool_name, tool_args)),
-        final({"summary": f"Tool {tool_name} ausgeführt"}),
+        final({"summary": f"Tool {tool_name} executed"}),
     )
 
     start_background_task(f"Test tool {tool_name}")

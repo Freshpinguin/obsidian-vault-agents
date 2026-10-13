@@ -20,54 +20,54 @@ from src.navigation.vault_navigation import (
 
 
 def test_load_files_single_success(vault: Path):
-    res = load_files(["Grundannahmen.md"], vault_root=vault)
-    assert "Grundannahmen.md" in res
-    assert "Die Menschheit" in res or "Grundannahmen" in res
+    res = load_files(["Overview.md"], vault_root=vault)
+    assert "Overview.md" in res
+    assert "Die Menschheit" in res or "Overview" in res
 
 
 def test_load_files_multiple_success(vault: Path):
-    res = load_files(["Grundannahmen.md", "Technologie/Antriebe.md"], vault_root=vault)
-    assert "Grundannahmen.md" in res
-    assert "Technologie/Antriebe.md" in res
+    res = load_files(["Overview.md", "Architecture/Data-Pipeline.md"], vault_root=vault)
+    assert "Overview.md" in res
+    assert "Architecture/Data-Pipeline.md" in res
 
 
 def test_load_files_nonexistent(vault: Path):
-    res = load_files(["FantasieDatei.md"], vault_root=vault)
-    assert "Fehler" in res and "Keine Datei" in res
+    res = load_files(["ImaginaryFile.md"], vault_root=vault)
+    assert "Error" in res and "No file" in res
 
 
 def test_load_files_ambiguous(vault: Path):
-    res = load_files(["Gasgeborene"], vault_root=vault)
-    assert "Fehler" in res and "nicht eindeutig" in res
-    assert "Kulturen/Gasgeborene.md" in res
-    assert "Technologie/Gasgeborene.md" in res
+    res = load_files(["Decisions"], vault_root=vault)
+    assert "Error" in res and "is ambiguous" in res
+    assert "Meetings/Decisions.md" in res
+    assert "Architecture/Decisions.md" in res
 
 
 def test_load_file_summaries(vault: Path):
-    res = load_file_summaries(["Grundannahmen.md"], vault_root=vault)
-    assert "Grundannahmen.md" in res
+    res = load_file_summaries(["Overview.md"], vault_root=vault)
+    assert "Overview.md" in res
     # Nonexistent
-    res_none = load_file_summaries(["NichtDa.md"], vault_root=vault)
-    assert "Fehler" in res_none
+    res_none = load_file_summaries(["NotThere.md"], vault_root=vault)
+    assert "Error" in res_none
 
 
 def test_load_directory_summaries(vault: Path):
-    res = load_directory_summaries(["Kulturen"], vault_root=vault)
-    assert "Kulturen" in res
+    res = load_directory_summaries(["Meetings"], vault_root=vault)
+    assert "Meetings" in res
     # Nonexistent
-    res_none = load_directory_summaries(["KeinOrdner"], vault_root=vault)
-    assert "Fehler" in res_none
+    res_none = load_directory_summaries(["NoFolder"], vault_root=vault)
+    assert "Error" in res_none
 
 
 def test_load_and_format_ai_map(vault: Path):
     ai_map = load_ai_map(vault_root=vault)
     assert isinstance(ai_map, dict)
     formatted = format_ai_map(ai_map)
-    assert "Kulturen" in formatted or "Ordner" in formatted
+    assert "Meetings" in formatted or "Folder" in formatted
 
     # Test format with empty/custom map
     empty_formatted = format_ai_map({"directories": {}, "files": {}})
-    assert "(keine)" in empty_formatted
+    assert "(none)" in empty_formatted
 
 
 def test_load_ai_map_without_file(vault: Path):
@@ -81,20 +81,20 @@ def test_load_ai_map_without_file(vault: Path):
 def test_resolve_umlaut_folding(vault: Path):
     # Test directory or file with umlaut
     # Create a test folder with Umlaut
-    test_dir = vault / "Militärtechnik"
+    test_dir = vault / "Übersicht"
     test_dir.mkdir(parents=True, exist_ok=True)
-    (test_dir / "Sensoren.md").write_text("Sensoren Text\n", encoding="utf-8")
+    (test_dir / "Sensors.md").write_text("Sensors Text\n", encoding="utf-8")
 
-    # "Militaertechnik" should resolve to Militärtechnik
-    resolved = _resolve("Militaertechnik/Sensoren.md", vault_root=vault, expect="file")
-    assert resolved.name == "Sensoren.md"
-    assert resolved.parent.name == "Militärtechnik"
+    # "Uebersicht" should resolve to Übersicht
+    resolved = _resolve("Uebersicht/Sensors.md", vault_root=vault, expect="file")
+    assert resolved.name == "Sensors.md"
+    assert resolved.parent.name == "Übersicht"
 
 
 def test_resolve_typo_tolerance(vault: Path):
-    # Typo: Grundannhamen instead of Grundannahmen
-    resolved = _resolve("Grundannhamen.md", vault_root=vault, expect="file")
-    assert resolved.name == "Grundannahmen.md"
+    # Typo: Overveiw instead of Overview
+    resolved = _resolve("Overveiw.md", vault_root=vault, expect="file")
+    assert resolved.name == "Overview.md"
 
 
 def test_read_md_and_strip_frontmatter():

@@ -40,7 +40,7 @@ export async function loadFileTree() {
   } catch (err) {
     fileTreeEl.innerHTML = `
       <div style="padding: 1rem; color: var(--red); font-size: 0.8rem;">
-        Fehler beim Laden des Vaults: ${escapeHtml(err.message)}
+        Error loading the vault: ${escapeHtml(err.message)}
       </div>
     `;
   }
@@ -53,7 +53,7 @@ export function renderTree(filterText = "") {
 
   const domList = buildTreeDOM(state.vaultTreeData.items, filter);
   if (domList.length === 0) {
-    fileTreeEl.innerHTML = `<div style="padding: 0.75rem; color: var(--text-muted); font-size: 0.78rem;">Keine passenden Dateien gefunden.</div>`;
+    fileTreeEl.innerHTML = `<div style="padding: 0.75rem; color: var(--text-muted); font-size: 0.78rem;">No matching files found.</div>`;
   } else {
     domList.forEach(node => fileTreeEl.appendChild(node));
   }
@@ -68,7 +68,7 @@ export function buildTreeDOM(items, filter = "") {
 
     if (isDir) {
       const childNodes = buildTreeDOM(item.children || [], filter);
-      // Ordner anzeigen wenn Name passt oder ein Kind passt
+      // Show the folder if its name matches or a child matches
       if (!filter || matchesSelf || childNodes.length > 0) {
         const folderNode = document.createElement("div");
         const isExpanded = filter ? true : state.expandedFolders.has(item.path);
@@ -89,7 +89,7 @@ export function buildTreeDOM(items, filter = "") {
           <span class="node-count">${(item.children || []).length}</span>
         `;
 
-        // Drag & Drop auf Ordner-Element (gesamter Teilbaum)
+        // Drag & drop onto a folder element (the whole subtree)
         folderNode.addEventListener("dragover", (e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -146,7 +146,7 @@ export function buildTreeDOM(items, filter = "") {
         nodes.push(folderNode);
       }
     } else {
-      // Datei
+      // File
       if (!filter || matchesSelf) {
         const fileNode = document.createElement("div");
         fileNode.className = "tree-node file-node";
@@ -157,7 +157,7 @@ export function buildTreeDOM(items, filter = "") {
         const displayName = item.name.replace(/\.md$/i, "");
         row.title = item.ai_summary || displayName;
 
-        // Drag & Drop auf Datei-Zeile
+        // Drag & drop onto a file row
         row.draggable = true;
         row.addEventListener("dragstart", (e) => {
           e.dataTransfer.setData("text/plain", item.path);
@@ -193,7 +193,7 @@ export function renderQuickCards(treeData) {
   if (!quickCardsEl) return;
   quickCardsEl.innerHTML = "";
 
-  // Finde bis zu 4 Notizen für das Schnellstart-Dashboard
+  // Find up to 4 notes for the quick-start dashboard
   const sampleFiles = [];
   function collect(items) {
     for (const it of items) {
@@ -209,7 +209,7 @@ export function renderQuickCards(treeData) {
     const displayName = file.name.replace(/\.md$/i, "");
     card.innerHTML = `
       <div class="quick-card-title">📝 ${escapeHtml(displayName)}</div>
-      <div class="quick-card-desc">${escapeHtml(file.ai_summary || "Klicke zum Öffnen")}</div>
+      <div class="quick-card-desc">${escapeHtml(file.ai_summary || "Click to open")}</div>
     `;
     card.addEventListener("click", () => loadFileContent(file.path));
     quickCardsEl.appendChild(card);
@@ -263,7 +263,7 @@ if (btnRefreshTree) {
   });
 }
 
-// Vault-Root als Drop-Ziel für fileTreeEl
+// The vault root as a drop target for fileTreeEl
 if (fileTreeEl) {
   fileTreeEl.addEventListener("dragover", (e) => {
     e.preventDefault();

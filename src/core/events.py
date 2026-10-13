@@ -5,9 +5,9 @@ from typing import Dict, Any
 
 
 class VaultEventBroadcaster:
-    """Verwaltet Subscriptions für Echtzeit-Ereignisse (SSE) im Vault.
-    Thread-safe, sodass Watchdog-Events aus Hintergrund-Threads sicher an
-    asynchrone SSE-Clients weitergeleitet werden.
+    """Manages subscriptions for real-time vault events (SSE).
+    Thread-safe, so that watchdog events from background threads are forwarded
+    safely to asynchronous SSE clients.
     """
 
     def __init__(self):

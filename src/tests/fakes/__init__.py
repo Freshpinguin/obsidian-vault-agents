@@ -1,1 +1,1 @@
-# Test-Doubles für externe Dienste (litellm, Google GenAI, Antigravity SDK).
+# Test doubles for external services (litellm, Google GenAI, Antigravity SDK).

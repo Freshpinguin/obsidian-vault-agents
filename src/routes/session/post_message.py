@@ -7,7 +7,7 @@ from src.routes.session.storage import _sessions, _sessions_lock, get_session, r
 
 @router.post("/{session_id}/messages", response_model=ChatReplyResponse)
 def post_message(session_id: str, body: ChatMessageRequest, request: Request):
-    """Schickt eine weitere Nachricht an eine bestehende Chat-Session (per session_id aus start_session)."""
+    """Sends another message to an existing chat session (via the session_id from start_session)."""
     session = get_session(session_id)
     prev_len = len(session.history)
 

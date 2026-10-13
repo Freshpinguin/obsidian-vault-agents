@@ -49,7 +49,7 @@ export const docBodyEditorEl = document.getElementById("doc-body-editor");
 export const editorStatusDotEl = document.getElementById("editor-status-dot");
 export const editorStatusTextEl = document.getElementById("editor-status-text");
 
-// Lösch-Modal
+// Delete modal
 export const deleteModal = document.getElementById("delete-modal");
 export const deleteFileNameEl = document.getElementById("delete-file-name");
 export const btnConfirmDelete = document.getElementById("btn-confirm-delete");
@@ -62,7 +62,7 @@ export const btnBuildMissingSummaries = document.getElementById("btn-build-missi
 export const btnBuildMissingText = document.getElementById("btn-build-missing-text");
 export const toastContainerEl = document.getElementById("toast-container");
 
-// Datei- und Ordner-Erstellung (Explorer)
+// File and folder creation (explorer)
 export const btnNewFile = document.getElementById("btn-new-file");
 export const createModal = document.getElementById("create-modal");
 export const createModalTitle = document.getElementById("create-modal-title");

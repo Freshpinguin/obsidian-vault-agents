@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11" />
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
   <img src="https://img.shields.io/badge/Docker%20Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose" />
-  <img src="https://img.shields.io/badge/tests-215%20passing-success" alt="215 tests" />
+  <a href="https://github.com/Freshpinguin/obsidian-vault-agents/actions/workflows/tests.yml"><img src="https://github.com/Freshpinguin/obsidian-vault-agents/actions/workflows/tests.yml/badge.svg" alt="tests" /></a>
   <img src="https://img.shields.io/badge/runs%20on-Raspberry%20Pi-C51A4A?logo=raspberrypi&logoColor=white" alt="Runs on Raspberry Pi" />
 </p>
 
@@ -210,8 +210,8 @@ does not block; its progress lives in a job registry, so `check_task_status` can
 query it without starting a new LLM session.
 
 **Writing tools with fuzzy path resolution.** Agents may create, modify and move
-files. Since models rarely get paths exactly right (`Technology/Propulsion` vs.
-`./data/Technology/Propulsion.md`), the navigation layer resolves paths
+files. Since models rarely get paths exactly right (`architecture/data-pipeline`
+vs. `./data/Architecture/Data-Pipeline.md`), the navigation layer resolves paths
 tolerantly and reports ambiguities back instead of simply taking the first
 match.
 
@@ -298,20 +298,22 @@ OVA_LIVE_TESTS=1 pytest -m live          # opt-in: real LLM calls, consumes quot
 ```
 
 The default test run is fully offline: model providers are replaced by fakes in
-`src/tests/fakes/`. The live suite is deselected unless explicitly requested.
+`src/tests/fakes/`. The live suite is deselected unless explicitly requested, so
+no API key is needed — which is also why CI can run the full suite on every push
+([.github/workflows/tests.yml](.github/workflows/tests.yml)).
 
 ## Scope
 
 The system is in day-to-day use against a personal vault running on a Raspberry
 Pi. Two things to be aware of before pointing it at your own:
 
-- The system prompts are written in German and tuned for a worldbuilding vault.
-  Using it for a different domain or language means rewriting the prompts in
-  `src/agentic/agents/`.
 - Model selection assumes the Google AI Studio free tier. Other providers work
   through `litellm`, but the fallback cascade (`src/schemas/llm_models.py`) and
   the rotation pools (`src/agentic/engine/model_rotation.py`) are configured for
   Gemini and Gemma.
+- The bundled demo vault (`data.example/`) is a small fictional software-project
+  vault (project overview, meeting notes, architecture decision records). It
+  exists to make the engine runnable out of the box, not as a template to follow.
 
 ## License
 

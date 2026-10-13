@@ -13,7 +13,7 @@ from src.tests.fakes.fake_llm import FakeLLM, final, tool_calls
 def test_librarian_input_contains_question_and_ai_map(vault: Path, fake_llm: FakeLLM):
     fake_llm.script(
         "Librarian",
-        final({"answer": "Terra ist ein alter Name.", "sources": ["Grundannahmen.md"]}),
+        final({"answer": "Terra ist ein alter Name.", "sources": ["Overview.md"]}),
     )
 
     session = ask_librarian("Was bedeutet Terra?")
@@ -21,16 +21,16 @@ def test_librarian_input_contains_question_and_ai_map(vault: Path, fake_llm: Fak
     call = fake_llm.calls_for("Librarian")[0]
     # Input JSON in user message contains question and ai_map
     assert "Was bedeutet Terra?" in call.last_user_message
-    assert "Grundannahmen.md" in call.last_user_message or "ai_map" in call.last_user_message
+    assert "Overview.md" in call.last_user_message or "ai_map" in call.last_user_message
     assert isinstance(session.final_result, LibrarianOutput)
 
 
 @pytest.mark.parametrize(
     "tool_name, tool_args, expected_result_substr",
     [
-        ("load_directory_summaries", {"paths": ["Kulturen"]}, "Kulturen"),
-        ("load_file_summaries", {"paths": ["Grundannahmen.md"]}, "Grundannahmen.md"),
-        ("load_files", {"paths": ["Grundannahmen.md"]}, "Grundannahmen.md"),
+        ("load_directory_summaries", {"paths": ["Meetings"]}, "Meetings"),
+        ("load_file_summaries", {"paths": ["Overview.md"]}, "Overview.md"),
+        ("load_files", {"paths": ["Overview.md"]}, "Overview.md"),
     ],
 )
 def test_librarian_tools_effect(vault: Path, fake_llm: FakeLLM, tool_name: str, tool_args: dict, expected_result_substr: str):

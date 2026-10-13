@@ -16,7 +16,7 @@ from src.routes.files import router
 
 @router.post("/move", response_model=MutationResponse)
 def post_move(body: MoveNodeRequest):
-    """Verschiebt eine Datei oder Notiz im Vault an einen neuen Pfad."""
+    """Moves a file or note within the vault to a new path."""
     root = _vault_root().resolve()
 
     try:
@@ -27,7 +27,7 @@ def post_move(body: MoveNodeRequest):
     if not is_summarizable_path(source):
         raise HTTPException(
             status_code=400,
-            detail=f"Systemdatei '{source.name}' darf nicht verschoben werden.",
+            detail=f"System file '{source.name}' must not be moved.",
         )
 
     try:
@@ -38,29 +38,29 @@ def post_move(body: MoveNodeRequest):
     if destination.suffix != ".md":
         raise HTTPException(
             status_code=400,
-            detail="Das Ziel muss eine Markdown-Datei (.md) sein.",
+            detail="The destination must be a Markdown file (.md).",
         )
 
     if destination.exists():
         raise HTTPException(
             status_code=409,
-            detail=f"Zieldatei '{destination.name}' existiert bereits.",
+            detail=f"Destination file '{destination.name}' already exists.",
         )
 
     try:
         destination.parent.mkdir(parents=True, exist_ok=True)
         source.rename(destination)
-        # AI-Map-Eintrag mitziehen, damit die Notiz nicht unter dem alten Pfad
-        # haengen bleibt und die bisherige Zusammenfassung erhalten bleibt.
+        # Carry the AI map entry along, so the note does not linger under the old path
+        # and its existing summary is preserved.
         move_map_entry(source, destination, root)
         dest_vault_path = _vault_path(destination, root)
         src_vault_path = _vault_path(source, root)
-        logger.info(f"[Mutation] Datei verschoben: {src_vault_path} -> {dest_vault_path}")
+        logger.info(f"[Mutation] File moved: {src_vault_path} -> {dest_vault_path}")
         return MutationResponse(
             path=dest_vault_path,
             success=True,
-            message=f"Datei '{source.name}' wurde erfolgreich nach '{dest_vault_path}' verschoben.",
+            message=f"File '{source.name}' was moved successfully to '{dest_vault_path}'.",
         )
     except Exception as e:
-        logger.error(f"[Mutation] Fehler beim Verschieben von {source} nach {destination}: {e}")
-        raise HTTPException(status_code=500, detail=f"Fehler beim Verschieben: {str(e)}")
+        logger.error(f"[Mutation] Error moving {source} to {destination}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error while moving: {str(e)}")

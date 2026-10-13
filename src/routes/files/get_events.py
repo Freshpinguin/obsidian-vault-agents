@@ -10,20 +10,20 @@ from src.routes.files import router
 
 @router.get("/events")
 async def get_events(request: Request):
-    """Server-Sent Events (SSE) Stream für Dateiänderungen im Vault.
-    
-    Sendet Echtzeit-Nachrichten an das Frontend, sobald Dateien erstellt, geändert,
-    verschoben oder gelöscht werden, damit die linke Sidebar automatisch aktualisiert wird.
+    """Server-Sent Events (SSE) stream for file changes in the vault.
+
+    Sends real-time messages to the frontend as soon as files are created, modified,
+    moved or deleted, so the left sidebar updates automatically.
     """
     queue = vault_events.subscribe()
 
     async def event_generator():
         try:
-            # Sofortiges "connected" Event senden, damit der Client weiß, dass die Verbindung steht
+            # Send an immediate "connected" event so the client knows the connection is up
             yield f"event: connected\ndata: {json.dumps({'status': 'connected'})}\n\n"
 
             while True:
-                # Prüfen, ob der Client die Verbindung getrennt hat
+                # Check whether the client has disconnected
                 if await request.is_disconnected():
                     break
 

@@ -11,14 +11,14 @@ from types import SimpleNamespace as NS
 
 
 def test_web_search_arguments_and_sources_attached(fake_genai):
-    fake_genai.text = "Warp-Antrieb beruht auf Raumzeitkrümmung."
+    fake_genai.text = "Batch pipelines are typically scheduled daily."
     fake_genai.sources = [
         ("NASA Breakthrough", "https://nasa.gov/warp"),
         ("ESA Propulsion", "https://esa.int/warp"),
     ]
 
     res = web_search("Ist Warp realistisch?")
-    assert "Warp-Antrieb beruht auf Raumzeitkrümmung." in res
+    assert "Batch pipelines are typically scheduled daily." in res
     assert "NASA Breakthrough (https://nasa.gov/warp)" in res
     assert "ESA Propulsion (https://esa.int/warp)" in res
 
@@ -50,15 +50,15 @@ def test_web_search_deduplicates_sources():
 
 def test_web_search_empty_response(fake_genai):
     fake_genai.text = ""
-    res = web_search("Gibt es Leben auf dem Mars?")
-    assert "Fehler: Die Websuche lieferte keine Antwort." in res
+    res = web_search("Is daily batch still common practice?")
+    assert "Error: the web search returned no answer." in res
 
 
 def test_web_search_exception_handled(fake_genai):
-    fake_genai.exc = ConnectionError("Netzwerk nicht erreichbar")
+    fake_genai.exc = ConnectionError("Network unreachable")
     res = web_search("Test")
-    assert "Fehler: Die Websuche konnte nicht durchgeführt werden" in res
-    assert "Netzwerk nicht erreichbar" in res
+    assert "Error: the web search could not be performed" in res
+    assert "Network unreachable" in res
 
 
 def test_web_search_get_client_is_singleton(monkeypatch):

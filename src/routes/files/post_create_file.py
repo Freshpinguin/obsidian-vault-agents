@@ -15,7 +15,7 @@ from src.routes.files import router
 
 @router.post("/create-file", response_model=MutationResponse)
 def post_create_file(body: CreateNoteRequest):
-    """Erstellt eine neue Notizdatei (.md) im Vault."""
+    """Creates a new note file (.md) in the vault."""
     root = _vault_root().resolve()
 
     raw_path = (body.path or "").strip()
@@ -30,34 +30,34 @@ def post_create_file(body: CreateNoteRequest):
     if target.suffix != ".md":
         raise HTTPException(
             status_code=400,
-            detail="Die Notizdatei muss mit '.md' enden.",
+            detail="The note file must end in '.md'.",
         )
 
     if not is_summarizable_path(target):
         raise HTTPException(
             status_code=400,
-            detail=f"Dateiname '{target.name}' ist für Notizen nicht zulässig.",
+            detail=f"The file name '{target.name}' is not permitted for notes.",
         )
 
     if target.exists():
         raise HTTPException(
             status_code=409,
-            detail=f"Datei '{target.name}' existiert bereits.",
+            detail=f"File '{target.name}' already exists.",
         )
 
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         content_to_write = body.content if body.content.endswith("\n") or not body.content else f"{body.content}\n"
         target.write_text(content_to_write, encoding="utf-8")
-        # Nicht auf den Watchdog warten: Die neue Notiz soll sofort in der AI-Map stehen.
+        # Do not wait for the watchdog: the new note should be in the AI map immediately.
         register_pending_file(target, root)
         rel_path = _vault_path(target, root)
-        logger.info(f"[Mutation] Neue Notiz erstellt: {rel_path}")
+        logger.info(f"[Mutation] New note created: {rel_path}")
         return MutationResponse(
             path=rel_path,
             success=True,
-            message=f"Notiz '{target.name}' wurde erfolgreich erstellt.",
+            message=f"Note '{target.name}' was created successfully.",
         )
     except Exception as e:
-        logger.error(f"[Mutation] Fehler beim Erstellen der Notiz {target}: {e}")
-        raise HTTPException(status_code=500, detail=f"Fehler beim Erstellen der Datei: {str(e)}")
+        logger.error(f"[Mutation] Error creating note {target}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error while creating the file: {str(e)}")

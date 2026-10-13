@@ -1,5 +1,5 @@
 # src/agentic/tools/tasks.py
-"""WikiTool-Instanzen für Hintergrund-Aufgaben und Planungs-Management."""
+"""WikiTool instances for background tasks and plan management."""
 from src.schemas.tool_args import (
     CheckTaskStatusArgs,
     StartBackgroundTaskArgs,
@@ -14,21 +14,21 @@ from src.agentic.engine.jobs import (
 
 start_background_task_tool = WikiTool(
     name="start_background_task",
-    description="Startet einen Task-Agenten, der eine mehrschrittige Aufgabe eigenständig im Hintergrund plant und abarbeitet. Blockiert nicht, gibt sofort eine task_id zurück.",
+    description="Starts a task agent that plans and works through a multi-step assignment autonomously in the background. Does not block; returns a task_id immediately.",
     parameters=StartBackgroundTaskArgs,
     func=start_background_task,
 )
 
 check_task_status_tool = WikiTool(
     name="check_task_status",
-    description="Fragt Plan, Fortschritt und ggf. Endergebnis einer per start_background_task gestarteten Hintergrund-Aufgabe ab.",
+    description="Queries the plan, progress and (if finished) final result of a background task started via start_background_task.",
     parameters=CheckTaskStatusArgs,
     func=check_task_status,
 )
 
 update_plan_tool = WikiTool(
     name="update_plan",
-    description="Legt den vollständigen Arbeitsplan fest oder aktualisiert ihn (z.B. Status einzelner Schritte). Immer die komplette Liste aller Schritte übergeben.",
+    description="Sets or updates the complete work plan (e.g. the status of individual steps). Always pass the complete list of all steps.",
     parameters=UpdatePlanArgs,
     func=_update_plan,
 )

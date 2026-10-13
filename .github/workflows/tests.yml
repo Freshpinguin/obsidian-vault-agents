@@ -1,0 +1,35 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 3.11 matches the Dockerfile base image. The pinned litellm release has no
+      # 3.12 wheel, so the matrix stays on a single version deliberately.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            src/requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      # The default run is fully offline: model providers are replaced by fakes in
+      # src/tests/fakes/, and the live suite is deselected in pytest.ini. No API
+      # key is required.
+      - name: Run tests
+        run: pytest -q
