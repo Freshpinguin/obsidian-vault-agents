@@ -140,12 +140,17 @@ def sync_threads(monkeypatch):
 @pytest.fixture(autouse=True)
 def _reset_global_state(monkeypatch):
     from src.agentic.agents import librarian, task_agent
+    from src.agentic.engine.model_rotation import librarian_rotation, task_rotation
     from src.routes.session import storage
 
     task_agent._jobs.clear()
     storage._sessions.clear()
+    librarian_rotation.reset()
+    task_rotation.reset()
     monkeypatch.setattr(librarian, "_rotation", itertools.cycle(librarian._MODEL_ROTATION))
     monkeypatch.setattr(task_agent, "_rotation", itertools.cycle(task_agent._MODEL_ROTATION))
     yield
     task_agent._jobs.clear()
     storage._sessions.clear()
+    librarian_rotation.reset()
+    task_rotation.reset()

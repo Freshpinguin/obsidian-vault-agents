@@ -98,19 +98,19 @@ Reflex auf die erste Anfrage – rufe kein Werkzeug mehr auf und antworte direkt
 """
 
 
+from src.agentic.engine.model_rotation import TASK_MODELS, task_rotation
+
 # Free-Tier-APIs begrenzen Tokens/Minute PRO Modell, und der Task-Agent kann durch
 # seine vielen ReAct-Runden schnell in dieses Limit laufen. Abwechselnd zwischen zwei
-# Modellen zu wechseln verteilt die Last auf zwei getrennte Kontingente (siehe
-# librarian.py für dasselbe Muster). itertools.cycle + Lock, da mehrere Hintergrund-
-# Aufgaben parallel in eigenen Threads gestartet werden können.
-_MODEL_ROTATION = (LLMModels.GEMINI_3_5_FLASH_LITE, LLMModels.GEMINI_3_1_FLASH_LITE)
-_rotation_lock = threading.Lock()
-_rotation = itertools.cycle(_MODEL_ROTATION)
+# Modellen zu wechseln verteilt die Last auf zwei getrennte Kontingente.
+_MODEL_ROTATION = TASK_MODELS
+_rotation = task_rotation
 
 
 def _next_rotation_model() -> LLMModels:
-    with _rotation_lock:
-        return next(_rotation)
+    if hasattr(_rotation, "next"):
+        return _rotation.next()
+    return next(_rotation)
 
 
 def build_task_input(task_id: str, description: str) -> TaskAgentInput:

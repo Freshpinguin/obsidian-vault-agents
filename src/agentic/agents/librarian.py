@@ -75,18 +75,19 @@ LibrarianAgent = WikiAgent(
 )
 
 
+from src.agentic.engine.model_rotation import LIBRARIAN_MODELS, librarian_rotation
+
 # Free-Tier-APIs begrenzen Tokens/Minute PRO Modell. Ein einzelnes Modell (31B) läuft bei
 # reger Nutzung schnell in dieses Limit; abwechselnd 31B/26B zu verwenden verteilt die Last
-# auf zwei getrennte Kontingente. itertools.cycle + Lock, da mehrere Chat-Sessions parallel
-# (im FastAPI-Threadpool) gleichzeitig Fragen an den Librarian stellen können.
-_MODEL_ROTATION = (LLMModels.GEMMA_31B, LLMModels.GEMMA_26B)
-_rotation_lock = threading.Lock()
-_rotation = itertools.cycle(_MODEL_ROTATION)
+# auf zwei getrennte Kontingente.
+_MODEL_ROTATION = LIBRARIAN_MODELS
+_rotation = librarian_rotation
 
 
 def _next_rotation_model() -> LLMModels:
-    with _rotation_lock:
-        return next(_rotation)
+    if hasattr(_rotation, "next"):
+        return _rotation.next()
+    return next(_rotation)
 
 
 def ask_librarian(question: str, model_override: LLMModels | None = None) -> AgentSession:

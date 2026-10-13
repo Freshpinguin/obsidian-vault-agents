@@ -8,6 +8,7 @@ import uuid
 
 from src.core.logging_config import logger
 from src.schemas.llm_models import LLMModels
+from src.agentic.engine.model_rotation import task_rotation
 from src.agentic.engine.runner import run_agent_session
 
 if TYPE_CHECKING:
@@ -76,14 +77,11 @@ def start_background_task(description: str, model_override: LLMModels | None = N
     GEMINI_3_1_FLASH_LITE, um das Tokens/Minute-Limit der Free-Tier-API auf zwei
     Modelle zu verteilen (die gesamte Aufgabe läuft dann durchgängig mit dem gewählten
     Modell, die Rotation greift pro Hintergrund-Aufgabe, nicht pro Runde)."""
-    # bewusst lokal: bricht den Zyklus engine -> agents -> tools -> engine
-    from src.agentic.agents.task_agent import _next_rotation_model
-
     job = TaskJob(task_id=uuid.uuid4().hex[:12], description=description)
     with _jobs_lock:
         _jobs[job.task_id] = job
 
-    use_model = model_override or _next_rotation_model()
+    use_model = model_override or task_rotation.next()
     thread = threading.Thread(target=_run_job, args=(job, use_model), daemon=True)
     thread.start()
 
