@@ -12,6 +12,7 @@ from src.core.obsidian_processor import (
 from src.core.rebuild import rebuild_universe
 from src.core.scheduler import FolderSummaryScheduler, SummaryScheduler
 from src.core.events import vault_events, VaultEventBroadcaster
+from src.core.map_maintenance import run_ai_map_maintenance
 
 __all__ = [
     "logger",
@@ -27,4 +28,5 @@ __all__ = [
     "rebuild_universe",
     "FolderSummaryScheduler",
     "SummaryScheduler",
+    "run_ai_map_maintenance",
 ]

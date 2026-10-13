@@ -1,4 +1,4 @@
-# src/agents/map_maintenance.py
+# src/core/map_maintenance.py
 import json
 import time
 from pathlib import Path

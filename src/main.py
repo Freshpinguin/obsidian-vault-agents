@@ -16,7 +16,7 @@ from src.core.obsidian_processor import is_summarizable_path
 from src.core.scheduler import SummaryScheduler
 from src.core.backup import run_auto_backup
 from src.core.logging_config import logger
-from src.agents.map_maintenance import run_ai_map_maintenance
+from src.core.map_maintenance import run_ai_map_maintenance
 from src.routes import router as api_router
 
 # Die FastAPI App initialisieren
