@@ -35,12 +35,15 @@ ability and tight rate limits, and that is what shaped the architecture.
 
 ## Demo
 
-> _A short screen recording of the application will go here._
+<p align="center">
+  <img src="assets/screenshot.png" alt="The three-pane interface: vault explorer, note viewer with its AI summary, and the chat agent answering from the notes" width="100%" />
+</p>
 
-<!--
-  TODO: replace with the recording, e.g.
-  https://github.com/user-attachments/assets/<id>
--->
+<p align="center">
+  <em>Left: the vault. Middle: a note with the AI summary and resolved links the engine
+  maintains for it. Right: the agent answering from those notes — it read
+  <code>Animals/Penguin.md</code> and the notes it links to, rather than the whole vault.</em>
+</p>
 
 ## Built for free-tier models
 
