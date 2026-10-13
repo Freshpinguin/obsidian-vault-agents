@@ -86,7 +86,9 @@ export async function loadFileContent(filePath) {
       data.linked_files.forEach(link => {
         const chip = document.createElement("a");
         chip.className = "wikilink-chip";
-        chip.textContent = `[[${link}]]`;
+        // Display without the .md, like the inline wikilinks in the body; the click
+        // still uses the full resolved path.
+        chip.textContent = `[[${link.replace(/\.md$/, "")}]]`;
         chip.href = "javascript:void(0)";
         chip.addEventListener("click", () => loadFileContent(link));
         docWikilinksListEl.appendChild(chip);

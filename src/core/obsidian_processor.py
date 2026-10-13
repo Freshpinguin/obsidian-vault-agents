@@ -41,12 +41,19 @@ def is_summarizable_path(filepath: Path) -> bool:
 
 def build_note_index(vault_root: Path) -> dict[str, str]:
     """Builds a mapping of note name -> relative path for the entire vault, so that
-    wikilink targets can be resolved to real files."""
+    wikilink targets can be resolved to real files.
+
+    Obsidian accepts both the bare note name ([[Capybara]]) and a path ([[Animals/Capybara]]),
+    so both spellings are indexed - otherwise a path-style link silently ends up in
+    linked_files as an unresolvable string.
+    """
     index: dict[str, str] = {}
     for md_file in vault_root.rglob("*.md"):
         if not is_summarizable_path(md_file):
             continue
-        index.setdefault(md_file.stem, md_file.relative_to(vault_root).as_posix())
+        relative = md_file.relative_to(vault_root).as_posix()
+        index.setdefault(md_file.stem, relative)
+        index.setdefault(relative.removesuffix(".md"), relative)
     return index
 
 
