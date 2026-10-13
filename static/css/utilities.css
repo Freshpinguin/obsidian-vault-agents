@@ -1,0 +1,19 @@
+/* Body toggle helper classes */
+body.hide-file-metadata .meta-header-box {
+  display: none !important;
+}
+
+body.hide-ai-summary #doc-ai-box {
+  display: none !important;
+}
+
+body.hide-wikilinks #doc-wikilinks {
+  display: none !important;
+}
+
+/* Editor font size classes */
+body.font-compact .markdown-body { font-size: 0.88rem; line-height: 1.55; }
+body.font-large .markdown-body { font-size: 1.05rem; line-height: 1.75; }
+
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.icon-btn.spinning svg { animation: spin 0.75s linear infinite; }
