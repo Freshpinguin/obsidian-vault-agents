@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.jpg" alt="Obsidian Vault Agents Logo" width="220" />
+</p>
+
 # Obsidian Vault Agents
 
 Eine selbstgehostete Agenten-Engine für einen persönlichen **Obsidian-Vault**.
