@@ -11,7 +11,7 @@ FRONTEND_PATH = Path(__file__).resolve().parents[3] / "index.html"
 
 @router.get("/")
 def get_frontend():
-    return FileResponse(FRONTEND_PATH)
+    return FileResponse(FRONTEND_PATH, headers={"Cache-Control": "no-cache"})
 
 
 # Alias
