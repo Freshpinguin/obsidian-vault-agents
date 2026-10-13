@@ -1,236 +1,288 @@
 <p align="center">
-  <img src="assets/logo.jpg" alt="Obsidian Vault Agents Logo" width="220" />
+  <img src="assets/logo.jpg" alt="Obsidian Vault Agents" width="360" />
 </p>
 
-# Obsidian Vault Agents
+<h1 align="center">Obsidian Vault Agents</h1>
 
-Eine selbstgehostete Agenten-Engine für einen persönlichen **Obsidian-Vault**.
-Sie beobachtet den Vault im Hintergrund, hält für jede Datei und jeden Ordner
-KI-Zusammenfassungen aktuell und stellt einen Chat bereit, der über diese
-Zusammenfassungen navigiert, statt blind durch alle Dateien zu greppen.
+<p align="center">
+  <strong>A self-hosted agent engine for personal Markdown knowledge bases.</strong><br />
+  It keeps AI summaries of every file and folder current, and answers questions by
+  navigating those summaries instead of grepping the whole vault.
+</p>
 
-Entstanden ist das Projekt für ein Science-Fiction-Weltenbau-Wiki, bei dem der
-Vault schneller wächst, als man ihn im Kopf behält: Wer ist noch mal mit wem
-verfeindet, und in welcher Datei stand die Regel zum Warp-Antrieb? Die Engine
-läuft auf einem Raspberry Pi, die Inhalte bleiben lokal.
-
-## Der eigentliche Punkt: das Ganze kostet nichts
-
-Alles, was hier beschrieben wird — sieben Agenten, Zusammenfassungs-Pipeline,
-Chat, Websuche, Hintergrund-Aufgaben — läuft vollständig auf dem **kostenlosen
-Free Tier von Google AI Studio**. Man braucht genau eine Sache, um es selbst zu
-betreiben: einen `GEMINI_API_KEY`, den man sich in zwei Minuten kostenlos
-anlegt. Keine Kreditkarte, kein Abo, keine Vektordatenbank, kein gehosteter
-Dienst, keine Nutzungsabrechnung. Ausser dem Strom für den Raspberry Pi
-entstehen keine laufenden Kosten — dauerhaft, nicht als Testphase.
-
-Das ist keine Nebenbemerkung, sondern die Vorgabe, aus der die Architektur
-entstanden ist: Verwendet werden ausschliesslich Modelle, die im Free Tier
-verfügbar sind (Gemini Flash-Lite und Gemma), und auch die Websuche nutzt
-Search Grounding im Free Tier. Debouncing, Modell-Kaskade, Modell-Rotation und
-Kontext-Kompaktierung sind alle genau dafür da, mit diesen Kontingenten
-auszukommen (siehe [Kosten: keine](#kosten-keine)).
-
-Wer einen eigenen Obsidian-Vault und einen Raspberry Pi (oder irgendeinen
-Rechner mit Docker) hat, kann das hier also ohne jede Ausgabe nachbauen.
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" />
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Docker%20Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose" />
+  <img src="https://img.shields.io/badge/tests-215%20passing-success" alt="215 tests" />
+  <img src="https://img.shields.io/badge/runs%20on-Raspberry%20Pi-C51A4A?logo=raspberrypi&logoColor=white" alt="Runs on Raspberry Pi" />
+</p>
 
 ---
 
-## Das Grundproblem
+Obsidian Vault Agents watches an Obsidian vault in the background, maintains a
+machine-readable map of its contents, and exposes a web interface where a chat
+agent can read, search, create, edit and move notes on your behalf. Everything
+runs on your own hardware — a Raspberry Pi is enough — and your notes never
+leave it except as prompts to the model provider you configure.
 
-Ein gewachsener Wissens-Vault ist für ein LLM schlecht durchsuchbar. Volltextsuche
-über hunderte Markdown-Dateien liefert entweder zu viel oder das Falsche, und der
-gesamte Vault passt nicht ins Kontextfenster.
+## Demo
 
-Die Engine legt deshalb eine **navigierbare Zwischenschicht** an:
+> _A short screen recording of the application will go here._
 
-| Artefakt | Inhalt |
+<!--
+  TODO: replace with the recording, e.g.
+  https://github.com/user-attachments/assets/<id>
+-->
+
+## The problem
+
+A knowledge vault that has grown organically is difficult for a language model
+to search. Full-text search across hundreds of Markdown files returns either
+too much or the wrong thing, and the vault as a whole does not fit into a
+context window.
+
+The engine therefore maintains a **navigable intermediate layer**:
+
+| Artifact | Contents |
 |---|---|
-| `.ai_map.json` | zentrale Karte: jede Datei und jeder Ordner mit Ein-Satz-Zusammenfassung |
-| `<Ordner>/.index.md` | ausführlichere Ordner-Zusammenfassung im YAML-Frontmatter |
-| `linked_files` | pro Datei die Ziele ihrer Obsidian-Wikilinks, als Frontmatter |
+| `.ai_map.json` | Central map: every file and folder with a one-sentence summary |
+| `<folder>/.index.md` | A longer folder summary in YAML frontmatter |
+| `linked_files` | Per file, the targets of its Obsidian wikilinks, as frontmatter |
 
-Ein Agent liest erst die Karte, entscheidet dort, welche Dateien relevant sind,
-und öffnet nur diese. Das ersetzt eine Vektordatenbank durch etwas, das man auch
-selbst lesen kann — die Artefakte liegen als normale Dateien im Vault.
+An agent reads the map first, decides there which files are relevant, and opens
+only those. This replaces a vector database with something you can also read
+yourself — the artifacts are plain files inside the vault.
 
-## Architektur
+## Architecture
 
 ```
-Obsidian-Vault ──> watchdog ──> Scheduler (debounced) ──> Summarizer-Agenten
+Obsidian vault ──> watchdog ──> Scheduler (debounced) ──> Summarizer agents
      ^                                                          │
      │                                                          v
      └────────────── .ai_map.json / .index.md <─────────────────┘
                               │
                               v
-                       Chat-Agent (ReAct)
-                       ├── ask_librarian      Suche über die Karte
-                       ├── create/edit/move   Änderungen am Vault
-                       ├── deep_reasoning     langer Kontext, hohes Thinking
-                       ├── web_search         Google Search Grounding
-                       └── start_background_task ──> Task-Agent (eigener Thread)
+                       Chat agent (ReAct)
+                       ├── ask_librarian      search across the map
+                       ├── create/edit/move   vault mutations
+                       ├── deep_reasoning     long context, high thinking budget
+                       ├── web_search         Google Search grounding
+                       └── start_background_task ──> Task agent (own thread)
 ```
 
-### Paketstruktur (`src/`)
+### Agents
 
-- `src/agentic/` — Kapselt die gesamte KI- und Agenten-Schicht hinter einer schlanken Fassade (`src/agentic/__init__.py`):
-  - `agents/`: Roster aller Agenten (`ChatAgent`, `TaskAgent`, `LibrarianAgent`, `Summarizer`, `FolderSummarizer`, `reasoner`, `web_search`)
-  - `engine/`: ReAct-Ausführungsschleife (`runner.py`), Kontext-Kompaktierung (`compaction.py`), Job-Registry (`jobs.py`), Absicherungen (`guards.py`), Response-Parsing (`response.py`), Sitzungslogs (`session_log.py`) und Modell-Rotation (`model_rotation.py`)
-  - `tools/`: Modulare Werkzeugdefinitionen (`vault_read.py`, `vault_write.py`, `delegation.py`, `tasks.py`)
-- `src/core/` — Vault-Verwaltung, Watchdog, Scheduler, Kartenpflege (`map_maintenance.py`), Rebuild
-- `src/navigation/` — Dateisystem- und YAML-Zugriff auf den Obsidian-Vault
-- `src/routes/` — FastAPI HTTP-Endpunkte für Chat-Sessions und Datei-Operationen
-- `src/schemas/` — Pydantic-Datenmodelle und Werkzeug-Argumente
-
-### Agenten
-
-| Agent | Aufgabe |
+| Agent | Responsibility |
 |---|---|
-| **Chat** | beantwortet Fragen im Dialog, ruft die übrigen Agenten als Werkzeuge auf |
-| **Task** | arbeitet mehrschrittige Aufgaben eigenständig ab: plant erst, hakt Schritte ab, berichtet am Ende |
-| **Librarian** | findet relevante Dateien über die Karte statt über Volltextsuche |
-| **Summarizer** | Zusammenfassung einzelner Dateien |
-| **Folder-Summarizer** | Zusammenfassung ganzer Ordner, kaskadiert nach oben |
-| **Reasoner** | längere Ausarbeitungen mit viel Kontext, hohes Thinking-Budget |
-| **Web-Search** | Faktenchecks gegen das echte Internet |
+| **Chat** | Answers questions conversationally; calls the other agents as tools |
+| **Task** | Works through multi-step assignments autonomously: plans first, ticks off steps, reports at the end |
+| **Librarian** | Locates relevant files via the map rather than full-text search |
+| **Summarizer** | Summarizes individual files |
+| **Folder summarizer** | Summarizes whole folders, cascading upward |
+| **Reasoner** | Longer elaborations with large context and a high thinking budget |
+| **Web search** | Fact-checks against the live internet |
 
-## Der agentische Workflow in Kurzform
+## How the agent runtime works
 
-Ausführlich dokumentiert in [docs/agentic-workflow.md](docs/agentic-workflow.md) —
-hier die Kurzfassung.
+Documented in full in [docs/agentic-workflow.md](docs/agentic-workflow.md); the
+short version follows.
 
-**Zwei Arten von Agenten.** Fünf Agenten (Chat, Task, Librarian, Summarizer,
-FolderSummarizer) sind deklarative `WikiAgent`-Definitionen — System-Prompt,
-Eingabe-Schema, Antwort-Schema, Werkzeuge, Rundenbudget — und laufen über
-dieselbe Ausführungsschleife via `litellm`. Reasoner und Web-Search sind dagegen
-einzelne SDK-Aufrufe ohne Session und ohne Werkzeuge; sie existieren nur als
-Werkzeug anderer Agenten und geben im Fehlerfall einen lesbaren Fehlertext
-zurück statt zu werfen.
+**Two kinds of agent.** Five agents (Chat, Task, Librarian, Summarizer, Folder
+summarizer) are declarative `WikiAgent` definitions — system prompt, input
+schema, response schema, tools, turn budget — and all run through the same
+execution loop via `litellm`. Reasoner and web search are single SDK calls
+without a session and without tools; they exist only as tools for other agents
+and return readable error text instead of raising.
 
-**Ein Turn.** `engine/runner.py` führt pro Aufruf einen Turn aus: Kontext aus
-der Session bauen, Modell aufrufen, Werkzeug-Aufrufe ausführen und als
-Nachrichten anhängen, wiederholen — bis das Modell keine Werkzeuge mehr
-anfordert und stattdessen die finale Antwort liefert. Diese wird gegen das
-Antwort-Schema geparst; schlägt das fehl, geht der konkrete Fehlerbericht
-zurück ans Modell (bis `max_retries`). Eine Runde vor dem Iterationslimit
-werden die Werkzeuge entzogen und eine finale Antwort erzwungen, statt die
-Session ergebnislos abzubrechen.
+**One turn.** `engine/runner.py` executes one turn per invocation: build context
+from the session, call the model, execute requested tool calls and append them
+as messages, repeat — until the model stops requesting tools and returns a final
+answer instead. That answer is parsed against the response schema; if parsing
+fails, the concrete error report goes back to the model (up to `max_retries`).
+One round before the iteration limit, tools are withdrawn and a final answer is
+forced, rather than ending the session without a result.
 
-**Die Session ist die einzige Quelle der Wahrheit.** Der Kontext jedes
-Modellaufrufs entsteht ausschliesslich aus `AgentSession.messages` — daneben
-wird nichts mitgeführt. Genau deshalb kann die Kompaktierung einfach diese
-Liste umschreiben.
+**The session is the single source of truth.** The context of every model call
+is derived exclusively from `AgentSession.messages`; nothing is carried
+alongside it. That is precisely why compaction can simply rewrite this list.
 
-**Absicherungen gegen halluzinierte Arbeit.** Zwei Prüfungen verwerfen eine
-syntaktisch gültige finale Antwort und erzwingen einen Retry: eine Antwort ganz
-ohne Werkzeug-Aufruf bei Agenten, die laut Prompt immer eines nutzen müssen
-(Task-Agent: `update_plan`), und eine Antwort, die eine Dateiänderung behauptet
-("lege ich dir an", "wurde erstellt"), ohne dass je ein schreibendes Werkzeug
-aufgerufen wurde.
+**Guards against hallucinated work.** Two checks discard a syntactically valid
+final answer and force a retry: an answer with no tool call at all from agents
+whose prompt requires one (the task agent's `update_plan`), and an answer that
+claims a file change ("I've created that for you") without any writing tool
+having been invoked.
 
-**Drei Abläufe.** (1) *Chat*: HTTP-Request → Chat-Agent mit ai_map und ggf. der
-im Editor geöffneten Notiz im Kontext → ReAct-Runden → Antwort plus Liste der
-tatsächlich ausgeführten Vault-Änderungen. (2) *Hintergrund-Aufgabe*: Der
-Chat-Agent startet den Task-Agenten in einem eigenen Thread und bekommt sofort
-eine `task_id`; dessen Plan liegt als reiner Zustand in der Job-Registry, eine
-Statusabfrage kostet daher keinen Modellaufruf. (3) *Zusammenfassung*: Watchdog
-→ debounced Scheduler → Summarizer → Frontmatter und `.ai_map.json` → Ordner-
-Zusammenfassung, die nur bei echter Änderung eine Ebene weiter nach oben
-kaskadiert.
+**Three flows.** (1) *Chat*: HTTP request → chat agent with the ai_map and, if
+present, the note currently open in the editor → ReAct rounds → answer plus a
+list of the vault changes actually performed. (2) *Background task*: the chat
+agent starts the task agent in its own thread and immediately receives a
+`task_id`; the plan lives as pure state in the job registry, so a status query
+costs no model call. (3) *Summarization*: watchdog → debounced scheduler →
+summarizer → frontmatter and `.ai_map.json` → folder summary, which cascades one
+level further up only on a genuine change.
 
-**Verschachtelte Sessions.** Ruft der Chat-Agent `ask_librarian` auf, läuft
-darin eine komplette zweite Agenten-Session mit eigenem Budget und eigenem
-Logfile. Sie liefert Antwort, Quellenpfade *und* den Volltext dieser Quellen
-zurück, damit der Aufrufer sie nicht erneut laden muss.
+**Nested sessions.** When the chat agent calls `ask_librarian`, a complete
+second agent session runs inside it with its own budget and its own log file. It
+returns an answer, source paths *and* the full text of those sources, so the
+caller does not have to load them again.
 
-**Nachvollziehbarkeit.** Jede Session schreibt eine Markdown-Logdatei nach
-`logs/llm_details/` — pro Schritt der komplette gesendete Kontext, die rohe
-Antwort, Tokenzahlen und alle Werkzeug-Aufrufe mit Ergebnis. Fehlverhalten
-lässt sich damit meist direkt am Log ablesen.
+**Traceability.** Every session writes a Markdown log to `logs/llm_details/` —
+per step the complete context sent, the raw response, token counts and all tool
+calls with their results. Misbehaviour can usually be read straight off the log.
 
-## Details, die den Unterschied machen
+## Design decisions
 
-**Debouncing statt Dauerfeuer.** Zusammenfassungen entstehen erst 30 Minuten nach
-der letzten Änderung an einer Datei. Ordner-Zusammenfassungen kaskadieren mit
-doppeltem Zeitfenster nach oben — und nur dann eine Ebene weiter, wenn sich auf
-der aktuellen Ebene tatsächlich etwas geändert hat. Ohne das würde jede
-Tippkorrektur in einer tief verschachtelten Datei die gesamte Kette bis zur
-Wurzel neu berechnen.
+**Debouncing instead of continuous fire.** Summaries are produced only 30
+minutes after the last change to a file. Folder summaries cascade upward on a
+doubled time window — and only one level further when something actually changed
+at the current level. Without this, every typo correction in a deeply nested file
+would recompute the entire chain up to the root.
 
-**Kontext-Kompaktierung.** In langen ReAct-Sessions wird bei jedem Aufruf der
-komplette Verlauf erneut gesendet, der Tokenverbrauch wächst also quadratisch.
-Der Compactor ersetzt den älteren Teil des Verlaufs durch eine mit einem
-günstigen Modell erzeugte Zusammenfassung und behält System-Prompt, Aufgabe und
-die letzten Runden im Original.
+**Context compaction.** In long ReAct sessions the full history is re-sent on
+every call, so token consumption grows quadratically. The compactor replaces the
+older part of the history with a summary generated by a cheap model, and keeps
+the system prompt, the assignment and the most recent rounds verbatim.
 
-**Modell-Kaskade.** Schlägt ein Modell fehl oder ist das Kontingent erschöpft,
-fällt die Engine über eine Fallback-Kette auf schwächere Modelle zurück, statt
-die Sitzung abzubrechen.
+**Model cascade.** If a model fails or its quota is exhausted, the engine falls
+back along a chain to weaker models instead of aborting the session.
 
-**Der Task-Agent läuft nebenläufig.** Er startet in einem eigenen Thread, damit
-der Chat nicht blockiert; sein Fortschritt liegt in einer Job-Registry, sodass
-`check_task_status` ihn abfragen kann, ohne eine neue LLM-Sitzung anzustossen.
+**The task agent runs concurrently.** It starts in its own thread so the chat
+does not block; its progress lives in a job registry, so `check_task_status` can
+query it without starting a new LLM session.
 
-**Schreibende Werkzeuge mit unscharfer Pfadauflösung.** Agenten dürfen Dateien
-anlegen, ändern und verschieben. Da Modelle Pfade selten exakt treffen
-(`Technologie/Antriebe` vs. `./data/Technologie/Antriebe.md`), löst die
-Navigationsschicht Pfade tolerant auf und meldet Mehrdeutigkeiten zurück,
-statt einfach die erstbeste Datei zu nehmen.
+**Writing tools with fuzzy path resolution.** Agents may create, modify and move
+files. Since models rarely get paths exactly right (`Technology/Propulsion` vs.
+`./data/Technology/Propulsion.md`), the navigation layer resolves paths
+tolerantly and reports ambiguities back instead of simply taking the first
+match.
 
-## Technik
+## Codebase
 
-Python, FastAPI, watchdog, `litellm` als Provider-Abstraktion, Google GenAI SDK
-für Search Grounding, Antigravity SDK für den Reasoner, pydantic-Schemas für alle
-Werkzeuge und Agenten-Ein-/Ausgaben, Docker Compose fürs Deployment.
-Rund 3.400 Zeilen Python.
+Roughly 5,400 lines of production Python and 3,800 lines of tests (215 offline, plus an opt-in live suite),
+plus a dependency-free vanilla-JS frontend. The layering is enforced by a test
+(`src/tests/unit/test_import_boundaries.py`) rather than by convention alone.
 
-## Kosten: keine
+```
+src/
+├── agentic/        AI and agent layer, behind one slim facade (agentic/__init__.py)
+│   ├── agents/     The agent roster: chat, task, librarian, summarizer,
+│   │               folder_summarizer, reasoner, web_search
+│   ├── engine/     ReAct loop (runner.py), context compaction (compaction.py),
+│   │               job registry (jobs.py), hallucination guards (guards.py),
+│   │               response parsing (response.py), session logs (session_log.py),
+│   │               model rotation (model_rotation.py)
+│   └── tools/      Modular tool definitions: vault_read, vault_write,
+│                   delegation, tasks
+├── core/           Vault supervision: watchdog handling, debounced scheduler,
+│                   map maintenance, backups, full rebuild
+├── navigation/     The only layer that touches the filesystem: path resolution,
+│                   YAML frontmatter, vault mutations
+├── routes/         FastAPI endpoints, one file per endpoint, grouped by resource
+│                   (session, files, frontend, health)
+├── schemas/        Pydantic models for every agent I/O and tool argument
+├── tests/          Unit, agent, engine and route tests, plus an opt-in live suite
+└── main.py         Application entrypoint: FastAPI app, watchdog, background threads
+```
 
-Wie oben beschrieben läuft das gesamte System auf dem **kostenlosen Kontingent
-von Google AI Studio**. Vier Architekturentscheidungen ergeben sich direkt
-daraus:
+Two conventions are worth knowing before reading further:
 
-- **Debouncing** verhindert, dass jede einzelne Änderung sofort einen Modellaufruf
-  auslöst. Wer beim Schreiben alle paar Sekunden speichert, würde ein Kontingent
-  sonst in Minuten aufbrauchen.
-- **Die Modell-Kaskade** fängt erschöpfte Ratenlimits ab: Statt abzubrechen, fällt
-  die Engine auf das nächstschwächere Modell zurück, das noch Kontingent hat.
-- **Die Modell-Rotation** verteilt die Last auf zwei Kontingente, weil das
-  Tokens/Minute-Limit pro Modell gilt: Librarian-Anfragen wechseln sich zwischen
-  zwei Gemma-Modellen ab, Hintergrund-Aufgaben zwischen zwei Flash-Lite-Modellen.
-- **Die Kontext-Kompaktierung** hält den pro Runde gesendeten Verlauf klein —
-  ohne sie läuft eine lange Task-Session allein durch ihren mitgeschleppten
-  Kontext ins Limit.
+- **Agents are data, not code.** An agent is a `WikiAgent` declaration
+  (prompt, schemas, tools, budget) interpreted by the shared runner. Adding an
+  agent means adding a definition, not a new execution path.
+- **Only `navigation/` touches the vault.** Everything above it works through
+  that layer, which is what makes the fuzzy path resolution and the mutation
+  guarantees hold everywhere.
 
-Wer mehr Durchsatz braucht, kann über `litellm` jeden anderen Anbieter
-einhängen — dann fallen dessen Kosten an.
+The frontend is plain HTML, CSS and JavaScript in `index.html` and `static/`
+(no build step): a three-pane shell with a file explorer, a note viewer/editor
+with rendered and raw modes, and the chat pane, kept in sync with the backend
+over server-sent events.
 
-## Start
+## Quick start
 
 ```bash
-cp .env.example .env      # GEMINI_API_KEY eintragen
+cp .env.example .env      # add your GEMINI_API_KEY
 docker compose up --build
 ```
 
-Danach läuft die Engine auf `http://localhost:8000`, das Chat-Frontend liegt
-unter `/`. Ohne weitere Konfiguration arbeitet sie auf dem mitgelieferten
-Demo-Vault `data.example/`. Für den eigenen Vault in der `.env`:
+The engine then runs at `http://localhost:8000`, with the chat frontend at `/`.
+With no further configuration it operates on the bundled demo vault
+`data.example/`.
 
-```
-VAULT_PATH=/pfad/zum/obsidian-vault
-```
-
-Ein vollständiger Erstdurchlauf über einen bestehenden Vault:
+A full initial pass over an existing vault:
 
 ```bash
 docker compose exec world-engine python -m src.core.rebuild
 ```
 
-## Hinweis
+## Configuration
 
-Persönliches Projekt, gewachsen um einen konkreten eigenen Anwendungsfall — kein
-Produkt und nicht auf Allgemeingültigkeit ausgelegt. Die System-Prompts sind auf
-Deutsch und auf Weltenbau zugeschnitten; für andere Vaults müsste man sie anpassen.
+All configuration lives in `.env`:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | — | Google AI Studio key (required) |
+| `VAULT_PATH` | `./data.example` | Path to your own Obsidian vault |
+| `BACKUP_INTERVAL_MINUTES` | `720` | Interval for the automatic git backup |
+| `MAP_MAINTENANCE_INTERVAL_MINUTES` | `60` | Interval for `.ai_map.json` consistency maintenance |
+
+`docker-compose.yml` additionally contains a commented-out Syncthing service for
+synchronizing the vault across several devices, and a commented-out SSH mount for
+pushing the automatic backup to a remote git repository.
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+pytest                                   # 215 tests, no API calls
+OVA_LIVE_TESTS=1 pytest -m live          # opt-in: real LLM calls, consumes quota
+```
+
+The default test run is fully offline: model providers are replaced by fakes in
+`src/tests/fakes/`. The live suite is deselected unless explicitly requested.
+
+## Operating cost
+
+The engine is built to run inside the **free tier of Google AI Studio**. It
+requires exactly one thing to operate: a `GEMINI_API_KEY`, which is free to
+create. No vector database, no hosted service, no usage billing.
+
+This was a design constraint rather than an afterthought, and four architectural
+decisions follow directly from it:
+
+- **Debouncing** prevents every individual edit from triggering a model call.
+  Saving every few seconds while writing would otherwise exhaust a quota in
+  minutes.
+- **The model cascade** absorbs exhausted rate limits: instead of aborting, the
+  engine falls back to the next weaker model that still has quota.
+- **Model rotation** spreads load across two quotas, because the tokens-per-minute
+  limit applies per model: librarian requests alternate between two Gemma models,
+  background tasks between two Flash-Lite models.
+- **Context compaction** keeps the per-round history small — without it a long
+  task session runs into the limit on its carried context alone.
+
+Only free-tier models are used (Gemini Flash-Lite and Gemma), and web search
+uses free-tier Search grounding. If you need more throughput, any other provider
+can be plugged in through `litellm`, at that provider's cost.
+
+## Scope
+
+The system is in day-to-day use against a personal vault running on a Raspberry
+Pi. Two things to be aware of before pointing it at your own:
+
+- The system prompts are written in German and tuned for a worldbuilding vault.
+  Using it for a different domain or language means rewriting the prompts in
+  `src/agentic/agents/`.
+- Model selection assumes the Google AI Studio free tier. Other providers work
+  through `litellm`, but the fallback cascade (`src/schemas/llm_models.py`) and
+  the rotation pools (`src/agentic/engine/model_rotation.py`) are configured for
+  Gemini and Gemma.
+
+## License
+
+Released under the [MIT License](LICENSE).
 
 ---
 
