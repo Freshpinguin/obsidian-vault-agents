@@ -4,14 +4,14 @@ Chat-Agent und Task-Agent). Liegen in einem eigenen Modul statt in chat.py, dami
 task_agent.py sie importieren kann, ohne einen Kreisimport mit chat.py zu erzeugen
 (chat.py importiert umgekehrt Funktionen aus task_agent.py für seine eigenen
 Hintergrund-Task-Werkzeuge)."""
-from src.schemas.chat_schema import AskLibrarianArgs, CreateDirectoryArgs, CreateFileArgs, EditFileArgs, MoveFileArgs
+from src.schemas.chat_schema import AskLibrarianArgs, CreateDirectoryArgs, CreateFileArgs, EditFileArgs, MoveFileArgs, DeleteFileArgs
 from src.schemas.reasoner_schema import ReasoningArgs
 from src.schemas.tool_schema import WikiTool
 from src.schemas.web_search_schema import WebSearchArgs
 from src.agents.librarian import ask_librarian, files_tool
 from src.agents.reasoner import run_reasoning
 from src.agents.web_search import web_search
-from src.navigation import create_directory, create_file, edit_file, load_files, move_file
+from src.navigation import create_directory, create_file, edit_file, load_files, move_file, delete_file
 
 
 def _ask_librarian_tool(question: str) -> str:
@@ -80,6 +80,13 @@ edit_file_tool = WikiTool(
     func=edit_file,
 )
 
+delete_file_tool = WikiTool(
+    name="delete_file",
+    description="Löscht eine bestehende .md-Datei im Vault dauerhaft.",
+    parameters=DeleteFileArgs,
+    func=delete_file,
+)
+
 # Die "Standard-Fähigkeiten", die sowohl Chat- als auch Task-Agent bekommen (jeweils
 # noch ergänzt um agenten-spezifische Werkzeuge wie load_files/files_tool oder
 # update_plan/Hintergrund-Task-Steuerung).
@@ -92,4 +99,5 @@ CONTENT_TOOLS = [
     create_file_tool,
     edit_file_tool,
     move_file_tool,
+    delete_file_tool,
 ]

@@ -7,7 +7,7 @@ from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.librarian_schema import LibrarianInput, LibrarianOutput, PathsArgs
 from src.schemas.llm_models import LLMModels
 from src.schemas.tool_schema import WikiTool
-from src.llm_engine import run_agent_session
+from src.agents.llm_engine import run_agent_session
 from src.navigation import (
     load_ai_map,
     format_ai_map,

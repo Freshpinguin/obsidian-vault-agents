@@ -10,7 +10,7 @@ import os
 
 from google.antigravity import Agent, LocalAgentConfig, models, types
 
-from src.logging_config import logger
+from src.core.logging_config import logger
 from src.navigation import load_files
 
 MODEL = "gemini-3.6-flash"  # unterstützt erweitertes Thinking (ThinkingLevel) über dieses SDK

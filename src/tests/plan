@@ -1,0 +1,442 @@
+# Testplan: Python-Testsuite für `obsidian-vault-agents`
+
+Ziel: eine gründliche, **deterministische und offline lauffähige** pytest-Suite unter `src/tests/`, die drei Dinge nachweist:
+
+1. **Nutzer-Intent → LLM-Call:** Sagt eine Person z. B. *„Erstelle eine Datei unter `Kulturen/` namens `Zeta.md` mit dem Inhalt `abc`“*, landet die Nachricht samt passender Tool-Schemas tatsächlich in einem `litellm.completion`-Aufruf des richtigen Agenten.
+2. **Jeder Agent setzt seinen LLM-Call ab:** Chat, TaskAgent, Librarian, Summarizer, FolderSummarizer, ContextCompactor, WebSearch (Google GenAI) und Reasoner (Antigravity SDK).
+3. **Jede mögliche LLM-Antwort hat einen Effekt-Test:** Für jeden Tool-Call, den ein Agent anfordern kann, und für jede Art finaler Antwort bzw. jeden Fehlerfall prüft ein Test, dass der Effekt wirklich eintritt (Datei liegt auf der Platte, Plan steht in der Registry, Retry wird ausgelöst, …).
+
+> [!IMPORTANT]
+> Kein Test darf echte Netzwerk-/LLM-Aufrufe machen. `litellm.completion`, `google.genai.Client` und `google.antigravity.Agent` werden immer gemockt. Einzige Ausnahme: das optionale, standardmäßig übersprungene Paket WP9 (`@pytest.mark.live`).
+
+---
+
+## 1. Erkenntnisse aus der Codeanalyse (für alle Subagenten relevant)
+
+| Thema | Befund | Folge für die Tests |
+|---|---|---|
+| Zentraler LLM-Einstieg | Alle WikiAgents laufen über `_run_turn` in [llm_engine.py](file:///Users/robin/Projects/obsidian-vault-agents/src/agents/llm_engine.py#L41-L262) → `litellm.completion(**kwargs)` | Ein einziger Patch auf `litellm.completion` deckt Chat, Task, Librarian, Summarizer, FolderSummarizer **und** Compactor ab (alle referenzieren dasselbe Modul `litellm`). |
+| Verschachtelte Agenten | Chat → `ask_librarian` → Librarian-Session (ebenfalls `litellm.completion`) | Der Fake-LLM muss Aufrufe **nach Agent routen** (über den System-Prompt), nicht nur eine globale Queue abarbeiten. |
+| `supports_tool_choice` | wird direkt in `llm_engine` importiert und hängt vom Modellnamen ab | Patchen: `src.agents.llm_engine.supports_tool_choice`, damit `tool_choice="required"` deterministisch ist. |
+| Vault-Pfad | `VAULT_ROOT`/`WATCH_DIR` werden **beim Import** in mehreren Modulen eingefroren (`vault_navigation`, `core_engine`, `main`, `routes/files/*`, `backup`, `rebuild`) | `WATCH_DIR` muss in `conftest.py` **vor jedem `src`-Import** auf ein festes Temp-Verzeichnis zeigen; pro Test wird dieser Ordner geleert und neu aus `data.example/` befüllt. |
+| Logging | `LOG_DIR` wird beim Import gelesen, `SessionLogger` schreibt Dateien | `LOG_DIR` ebenfalls vor dem Import auf ein Temp-Verzeichnis setzen. |
+| `.env` | `load_dotenv()` überschreibt bereits gesetzte Variablen nicht | Test-Variablen vorher setzen (`GEMINI_API_KEY=test-key`); die echte `.env` bleibt dann wirkungslos. |
+| TaskAgent | `start_background_task` startet einen `threading.Thread` | Für Tests auf synchron umstellen (`threading.Thread` in `src.agents.task_agent` durch eine Klasse ersetzen, die `target` in `start()` direkt ausführt) bzw. alternativ `join` über eine Hilfsfunktion. `_jobs` zwischen Tests leeren. |
+| Modell-Rotation | `itertools.cycle` in Librarian/TaskAgent ist globaler Zustand | Erwartungen an das Modell nur relativ prüfen (z. B. „in `_MODEL_ROTATION`“) oder `_rotation` per Fixture zurücksetzen. |
+| `main.py` | `@app.on_event("startup")` startet Watchdog, Backup (`git push`!) und Maintenance-Threads | Route-Tests dürfen **nicht** `src.main.app` mit Startup nutzen. Stattdessen eine eigene `FastAPI()` mit `src.routes.router` bauen. |
+| pytest | nicht in `.venv` installiert | `requirements-dev.txt` mit `pytest`, `pytest-cov` (optional `pytest-timeout`) anlegen. |
+
+---
+
+## 2. Zielstruktur
+
+```
+pytest.ini                          # testpaths = src/tests, pythonpath = ., markers
+requirements-dev.txt                # pytest, pytest-cov, pytest-timeout
+src/tests/
+├── __init__.py
+├── conftest.py                     # Env-Setup VOR src-Import, globale Fixtures
+├── fakes/
+│   ├── __init__.py
+│   ├── fake_llm.py                 # FakeLLM + Response-Builder (litellm-kompatibel)
+│   ├── fake_genai.py               # Fake google.genai Client für web_search
+│   └── fake_antigravity.py         # Fake Antigravity Agent für reasoner
+├── unit/
+│   ├── test_vault_mutation.py      # create/edit/move/delete/create_directory direkt
+│   ├── test_vault_navigation.py    # _resolve, load_files, Summaries, ai_map
+│   ├── test_tool_schema.py         # WikiTool.call / to_openai_schema
+│   ├── test_agent_schema.py        # SessionMessage, parse_response, build_messages
+│   └── test_strip_json_fence.py
+├── engine/
+│   └── test_run_turn.py            # ReAct-Loop: alle Zweige von _run_turn
+├── agents/
+│   ├── test_agent_registry.py      # Parametrisierter Smoke-Test: JEDER Agent ruft LLM
+│   ├── test_chat_intents.py        # Nutzer-Satz → LLM-Call (Inhalt der Anfrage)
+│   ├── test_chat_tool_effects.py   # Jede Chat-Tool-Antwort → realer Effekt
+│   ├── test_task_agent.py          # Plan, Tools, Hintergrund-Job, Status
+│   ├── test_librarian.py
+│   ├── test_summarizers.py         # Summarizer + FolderSummarizer → Frontmatter/.ai_map/.index.md
+│   ├── test_context_compactor.py
+│   ├── test_web_search.py
+│   └── test_reasoner.py
+├── routes/
+│   └── test_session_routes.py      # POST /session … → Datei existiert, mutations[] in Response
+└── live/
+    └── test_live_llm.py            # optional, @pytest.mark.live, standardmäßig skip
+```
+
+---
+
+## 3. Test-Infrastruktur (Kern-Design)
+
+### 3.1 `conftest.py` – Reihenfolge ist entscheidend
+
+```python
+# src/tests/conftest.py  (Skizze)
+import os, shutil, tempfile
+from pathlib import Path
+
+_TEST_ROOT = Path(tempfile.mkdtemp(prefix="ova-tests-"))
+VAULT_DIR = _TEST_ROOT / "vault"
+os.environ["WATCH_DIR"] = str(VAULT_DIR)        # MUSS vor jedem `import src...` stehen
+os.environ["LOG_DIR"] = str(_TEST_ROOT / "logs")
+os.environ["GEMINI_API_KEY"] = "test-key"
+VAULT_DIR.mkdir(parents=True, exist_ok=True)
+
+import pytest
+import litellm
+EXAMPLE_VAULT = Path(__file__).resolve().parents[2] / "data.example"
+
+@pytest.fixture
+def vault() -> Path:
+    """Frischer Vault pro Test (gleicher Pfad, da Module ihn beim Import einfrieren)."""
+    for child in VAULT_DIR.iterdir():
+        shutil.rmtree(child) if child.is_dir() else child.unlink()
+    shutil.copytree(EXAMPLE_VAULT, VAULT_DIR, dirs_exist_ok=True)
+    return VAULT_DIR
+
+@pytest.fixture
+def fake_llm(monkeypatch):
+    from src.tests.fakes.fake_llm import FakeLLM
+    fake = FakeLLM()
+    monkeypatch.setattr(litellm, "completion", fake)
+    monkeypatch.setattr("src.agents.llm_engine.supports_tool_choice", lambda model: True)
+    yield fake
+    fake.assert_all_consumed()   # keine ungenutzten Skript-Antworten
+
+@pytest.fixture(autouse=True)
+def _no_network(monkeypatch):
+    """Sicherheitsnetz: echte litellm-Calls ohne fake_llm schlagen laut fehl."""
+    def _boom(*a, **k): raise AssertionError("Echter LLM-Call im Test! fake_llm-Fixture benutzen.")
+    monkeypatch.setattr(litellm, "completion", _boom)
+
+@pytest.fixture
+def sync_threads(monkeypatch):
+    """Lässt start_background_task synchron laufen."""
+    class _SyncThread:
+        def __init__(self, target, args=(), kwargs=None, daemon=None):
+            self._t, self._a, self._k = target, args, kwargs or {}
+        def start(self): self._t(*self._a, **self._k)
+    monkeypatch.setattr("src.agents.task_agent.threading.Thread", _SyncThread)
+
+@pytest.fixture(autouse=True)
+def _reset_task_registry():
+    from src.agents import task_agent
+    task_agent._jobs.clear()
+    yield
+    task_agent._jobs.clear()
+```
+
+> [!NOTE]
+> Reihenfolge der Fixtures: `_no_network` ist `autouse`, `fake_llm` überschreibt den Patch danach. Damit das klappt, muss `fake_llm` explizit von `_no_network` abhängen (`def fake_llm(monkeypatch, _no_network)`).
+
+### 3.2 `FakeLLM` – skriptbare, agent-bewusste litellm-Attrappe
+
+Anforderungen:
+
+- **Aufzeichnen** jedes Aufrufs (`calls: list[dict]` mit allen kwargs: `model`, `messages`, `tools`, `tool_choice`, `response_format`, `fallbacks`, `temperature`).
+- **Routing nach Agent:** Erkennung über die System-Nachricht (`messages[0]["content"].startswith(agent.system_prompt[:80])`). Compactor-Aufrufe werden über `model == compaction_model` und das Fehlen von `tools` erkannt (oder per eigenem Kanal `"compactor"`).
+- **Skript pro Agent:** `fake.script("Chat", resp1, resp2, ...)`; ein Eintrag ist entweder ein Response-Objekt, eine `Exception` (wird geworfen) oder ein `callable(kwargs) -> Response` (für dynamische Antworten).
+- **Hilfen zur Auswertung:** `calls_for("Chat")`, `last_user_message("Chat")`, `tool_names_offered(call)`, `assert_all_consumed()`.
+
+Response-Builder (müssen exakt die Attribute liefern, die `_run_turn` liest: `choices[0].message.content`, `.tool_calls[i].id/.function.name/.function.arguments`, `usage.prompt_tokens/completion_tokens`):
+
+```python
+tool_calls(("create_file", {"path": "Kulturen/Zeta.md", "content": "abc"}),
+           ("load_files", {"paths": ["Kulturen/Apiden.md"]}))
+final({"reply": "Datei 'Kulturen/Zeta.md' wurde erstellt."})   # json.dumps
+raw("kein json")                                                # für Parse-Fehler
+raw('```json\n{"reply": "x"}\n```')                             # Fence-Stripping
+```
+
+Am besten mit `types.SimpleNamespace` umsetzen, keine Abhängigkeit von litellm-internen Klassen.
+
+### 3.3 `FakeGenAI` und `FakeAntigravity`
+
+- **WebSearch:** `monkeypatch.setattr("src.agents.web_search._get_client", lambda: fake_client)`; `fake_client.models.generate_content(**kw)` zeichnet `model`, `contents`, `config` auf und liefert ein Objekt mit `.text` und `candidates[0].grounding_metadata.grounding_chunks[*].web.uri/title` (Struktur in `_extract_sources` nachsehen).
+- **Reasoner:** `src.agents.reasoner.Agent` durch einen async Context Manager ersetzen, dessen `chat(prompt)` den Prompt aufzeichnet und ein Objekt mit `async text()` zurückgibt. `_build_config` ggf. ebenfalls patchen, falls er Umgebungsvariablen/Modelle validiert.
+
+---
+
+## 4. Arbeitspakete für Subagenten
+
+```mermaid
+graph TD
+    WP0["WP0 Infrastruktur (blockierend)"] --> WP1["WP1 Unit: Navigation/Mutation"]
+    WP0 --> WP2["WP2 Engine: _run_turn"]
+    WP0 --> WP3["WP3 Agent-Registry Smoke"]
+    WP0 --> WP4["WP4 Chat: Intent + Effekte"]
+    WP0 --> WP5["WP5 TaskAgent"]
+    WP0 --> WP6["WP6 Librarian, Summarizer, Compactor"]
+    WP0 --> WP7["WP7 WebSearch + Reasoner"]
+    WP0 --> WP8["WP8 API-Routen E2E"]
+    WP0 --> WP9["WP9 Live-Tests (optional)"]
+    WP1 & WP2 & WP3 & WP4 & WP5 & WP6 & WP7 & WP8 --> WP10["WP10 Abnahme & Coverage"]
+```
+
+**Regeln für alle Subagenten:**
+
+- Produktivcode in `src/` (außer `src/tests/`) **nicht verändern**. Zeigt ein Test einen echten Bug, wird der Test mit `@pytest.mark.xfail(strict=True, reason="BUG: …")` markiert und der Fund im Abschlussbericht gemeldet.
+- Nur die Fixtures und Fakes aus WP0 nutzen; neue gemeinsame Helfer gehören nach `src/tests/fakes/` (nach Absprache, um Konflikte zu vermeiden).
+- Jede Testfunktion hat einen sprechenden Namen und genau einen fachlichen Fokus. Inhalte und Pfade über `@pytest.mark.parametrize` variieren statt Tests zu kopieren.
+- Ausführung immer aus dem Repo-Root: `.venv/bin/python -m pytest src/tests/<datei> -q`.
+- Erledigt ist ein Paket erst, wenn die eigenen Tests grün sind (oder als `xfail` mit Begründung markiert) **und** `pytest src/tests -q` insgesamt nicht schlechter wird.
+
+---
+
+### WP0 – Infrastruktur (sequenziell, vor allen anderen)
+
+**Dateien:** `pytest.ini`, `requirements-dev.txt`, `src/tests/__init__.py`, `src/tests/conftest.py`, `src/tests/fakes/*.py`, `src/tests/test_infrastructure.py`
+
+**Aufgaben:**
+1. `requirements-dev.txt` (`-r src/requirements.txt`, `pytest`, `pytest-cov`, `pytest-timeout`) anlegen und in `.venv` installieren.
+2. `pytest.ini`: `testpaths = src/tests`, `pythonpath = .`, `addopts = -m "not live" --timeout=30`, Marker `live` registrieren.
+3. `conftest.py` und alle Fakes wie in Abschnitt 3 beschrieben umsetzen.
+4. Selbsttests in `test_infrastructure.py`:
+   - `vault`-Fixture liefert eine frische Kopie; eine in Test A angelegte Datei existiert in Test B nicht mehr.
+   - `src.navigation.vault_navigation.VAULT_ROOT == VAULT_DIR`.
+   - Ohne `fake_llm` wirft `litellm.completion` den `AssertionError`.
+   - FakeLLM routet korrekt nach Agent, wirft geskriptete Exceptions und meldet nicht verbrauchte Antworten.
+   - `sync_threads` führt `start_background_task` synchron aus.
+
+**Abnahme:** `pytest src/tests -q` grün; Fakes dokumentiert (Docstrings mit Nutzungsbeispiel).
+
+---
+
+### WP1 – Unit: Vault-Mutation & Navigation (ohne LLM)
+
+**Dateien:** `unit/test_vault_mutation.py`, `unit/test_vault_navigation.py`, `unit/test_tool_schema.py`, `unit/test_agent_schema.py`, `unit/test_strip_json_fence.py`
+
+| Funktion | Pflicht-Testfälle |
+|---|---|
+| `create_file` | Erfolg (Inhalt + abschließender Zeilenumbruch auf der Platte); fehlende Zwischenordner werden angelegt; existiert bereits → Fehler, Datei unverändert; Endung nicht `.md` → Fehler; Pfad-Ausbruch (`../x.md`, `/etc/x.md`) → Fehler; Root-Aliase (`data/…`, `/app/data/…`, `vault/…`) werden entfernt; Frontmatter im Inhalt wird entfernt; Unicode NFC/NFD (`Ära.md`); Systemdatei (`.index.md`, `.ai_map.json`) → Fehler |
+| `create_directory` | Erfolg inkl. verschachtelter Ordner; existiert bereits (Ordner/Datei) → Fehler; leerer Pfad → Fehler |
+| `edit_file` | Body ersetzt, Frontmatter bleibt erhalten; Frontmatter im neuen Inhalt wird nicht doppelt geschrieben; Fuzzy-Pfad (`technologie/antriebe`) trifft `Technologie/Antriebe.md`; nicht existent → Fehler; mehrdeutig (`Gasgeborene` existiert in zwei Ordnern!) → Fehler mit Kandidaten; Systemdatei → Fehler |
+| `move_file` | Erfolg (Quelle weg, Ziel mit gleichem Inhalt da); Ziel existiert → Fehler, nichts verändert; Ziel ohne `.md` → Fehler; Ziel außerhalb des Vaults → Fehler; Zielordner wird angelegt |
+| `delete_file` | Erfolg; nicht existent → Fehler; Systemdatei → Fehler |
+| Navigation | `load_files` (einzeln, mehrere, nicht existent, mehrdeutig), `load_file_summaries`, `load_directory_summaries`, `load_ai_map`/`format_ai_map` mit und ohne `.ai_map.json`, Umlaut-Folding (`Militaertechnik`), Tippfehler-Schwelle |
+| `WikiTool` | `to_openai_schema` ohne `title`-Felder; `call` mit gültigen Argumenten; ungültige Argumente → `"Fehler: Ungültige Argumente…"`; `func` wirft → `"Fehler bei Ausführung…"`; Nicht-String-Rückgabe wird zu `str` |
+| `agent_schema` | `SessionMessage.to_openai` für alle 4 Rollen inkl. Tool-Calls (JSON mit `ensure_ascii=False`); `parse_response` Erfolg und Fehlerbericht (enthält Feldname und Rohantwort); `build_response_format_prompt` mit und ohne Tools; `AgentSession.start` / `start_chat` (Kontext landet im System-Prompt, nicht in der User-Nachricht); `is_successful` / `final_result` |
+| `_strip_json_fence` | ohne Fence, mit ```` ```json ````, mit ```` ``` ````, nur öffnender Fence, leerer String |
+
+**Abnahme:** ≥ 95 % Line-Coverage für `src/navigation/vault_mutation.py` und `src/schemas/tool_schema.py`.
+
+---
+
+### WP2 – Engine: alle Zweige von `_run_turn`
+
+**Datei:** `engine/test_run_turn.py`. Arbeitet mit einem **minimalen Test-Agenten** (eigene `WikiAgent`-Instanz mit 1–2 Dummy-Tools, die ihre Aufrufe aufzeichnen), damit Engine-Logik unabhängig von echten Agenten geprüft wird.
+
+| # | Geskriptete LLM-Antwort(en) | Erwarteter Effekt |
+|---|---|---|
+| E1 | `final(valid)` | Genau 1 LLM-Call; `session.is_successful`; `final_result` korrekt typisiert; Logdatei existiert |
+| E2 | `tool_calls(dummy)` → `final` | Dummy-Tool mit exakt den Argumenten ausgeführt; `TOOL`-Nachricht mit `tool_call_id` im 2. Call enthalten; History `[TOOL_CALL, SUCCESS]` |
+| E3 | mehrere Tool-Calls in **einer** Antwort | alle in Reihenfolge ausgeführt, alle Ergebnisse im nächsten Request |
+| E4 | unbekannter Tool-Name | Ergebnis `"Fehler: Unbekanntes Tool …"` wird ans LLM zurückgegeben, keine Exception |
+| E5 | `function.arguments` ist kein gültiges JSON | Arguments = `{}` → Validierungsfehlertext als Tool-Ergebnis |
+| E6 | `raw("kein json")` → `final(valid)` | Retry: 2. Request enthält den Fehlerbericht als User-Nachricht; Erfolg |
+| E7 | `raw` × (max_retries + 1) | Abbruch nach genau `max_retries + 1` Versuchen; `is_successful == False` |
+| E8 | Antwort in JSON-Fence | wird korrekt geparst |
+| E9 | `litellm.completion` wirft Exception | History-Eintrag `ERROR` mit `"API Fehler"`; Abbruch ohne Retry |
+| E10 | Tool-Calls bis `max_tool_iterations - 1` | danach Request **ohne** `tools`, **mit** `response_format`; `FORCE_FINAL_ANSWER_INSTRUCTION` als User-Nachricht |
+| E11 | Request mit Tools | enthält `tools`, aber **kein** `response_format`; ohne Tools umgekehrt |
+| E12 | `require_tool_call_first_round=True`, erste Runde | `tool_choice == "required"`; ab Runde 2 nicht mehr; bei `supports_tool_choice → False` nie |
+| E13 | `require_tool_call_first_round=True`, LLM antwortet trotzdem sofort `final` | wird abgelehnt (Retry mit „mindestens einmal ein Werkzeug“) |
+| E14 | Agent mit Mutations-Tool, `final({"reply": "Ich habe die Datei X.md angelegt"})` ohne Tool-Call | `hallucinated_mutation` → Retry mit Ablehnungstext; **keine** Datei angelegt |
+| E15 | wie E14, aber mit Negation (`"konnte nicht angelegt werden"`) | gilt als Erfolg |
+| E16 | `model_override` | `model` im Request = Override; `fallbacks == FALLBACK_MAP[model]` |
+| E17 | `temperature` des Agenten | wird übergeben |
+| E18 | `continue_chat_session` | gleiche `session_id`, gleiche Logdatei, voller bisheriger Verlauf im neuen Request |
+
+---
+
+### WP3 – Agent-Registry: „Jeder Agent setzt einen LLM-Call ab“
+
+**Datei:** `agents/test_agent_registry.py`
+
+Ein **parametrisierter** Test über alle Agenten. Jede Zeile gibt an: Einstiegsfunktion, Minimal-Eingabe, erwarteter System-Prompt, Default-Modell bzw. Rotation, angebotene Tools.
+
+| Agent | Einstieg | Prüfung |
+|---|---|---|
+| Chat | `start_wiki_chat("Hallo")` | 1 Call; System-Prompt = `chat.SYSTEM_PROMPT` + ai_map-Kontext; `tools` = genau `CONTENT_TOOLS` + `start_background_task` + `check_task_status` |
+| TaskAgent | `start_background_task("…")` (sync) | Call mit `TaskAgent`-Prompt; `tool_choice="required"`; Modell ∈ `_MODEL_ROTATION`; Tools inkl. `update_plan` |
+| Librarian | `ask_librarian("…")` | Call mit Librarian-Prompt; Modell ∈ `(GEMMA_31B, GEMMA_26B)`; genau 3 Tools |
+| Summarizer | `process_obsidian_file(vault, file)` | Call **ohne** `tools`, **mit** `response_format=SummarizerOutput` |
+| FolderSummarizer | `process_folder_summary(vault, folder)` | wie oben mit `FolderSummarizerOutput` |
+| ContextCompactor | `maybe_compact` mit großem Verlauf | Call mit `model == compaction_model` |
+| WebSearch | `web_search("…")` | `generate_content` mit Tool `google_search` aufgerufen |
+| Reasoner | `run_reasoning("…")` | `Agent.chat` mit dem Task aufgerufen |
+
+Zusätzlich: ein Meta-Test, der alle `WikiAgent`-Instanzen in `src.agents.*` per Introspektion einsammelt und prüft, dass jede in dieser Tabelle vorkommt. So schlägt der Test fehl, sobald ein neuer Agent ohne Test hinzukommt.
+
+---
+
+### WP4 – Chat-Agent: Nutzer-Intent → LLM-Call → Effekt (Kernanforderung)
+
+**Dateien:** `agents/test_chat_intents.py`, `agents/test_chat_tool_effects.py`
+
+#### 4a. Intent → LLM-Call (`test_chat_intents.py`)
+
+Parametrisiert über Formulierungen und Varianten (Ordner existiert / existiert nicht, Unterordner, Umlaute, mehrzeiliger Inhalt):
+
+```python
+@pytest.mark.parametrize("message, folder, filename, content", [
+    ("Erstelle ein File unter dem Ordner Kulturen mit dem Inhalt abc", "Kulturen", ..., "abc"),
+    ("Leg mir bitte unter Technologie/Waffen eine Datei Laser.md an: 'Laser sind heiß'", ...),
+    ("Neue Notiz in Ären/Frühzeit namens Übersicht mit Inhalt ...", ...),
+])
+def test_create_file_request_reaches_chat_llm(vault, fake_llm, message, ...):
+```
+
+Prüfungen am **ersten** aufgezeichneten Call:
+- Die letzte User-Nachricht enthält die Nutzer-Nachricht wörtlich.
+- `create_file` und `create_directory` sind in `tools` angeboten, inkl. Parameterschema (`path`, `content`).
+- Die System-Nachricht enthält die ai_map (z. B. `Kulturen/Apiden.md`).
+- Mit `active_file` steht der `[Im Editor geöffnete Notiz: …]`-Header vor der Nachricht.
+- Analog je ein Intent-Test für edit / move / delete / „frag den Librarian“ / „recherchier im Web“ / „denk gründlich nach“ / Hintergrund-Task.
+
+> [!NOTE]
+> Ob das *echte* Modell auf diese Formulierung hin wirklich `create_file` wählt, kann ein gemockter Test nicht beweisen. Das prüft WP9 (live, optional). WP4 beweist: Die Anfrage erreicht das richtige LLM vollständig und korrekt formuliert, **und** jede mögliche Modellantwort wird korrekt umgesetzt.
+
+#### 4b. Jede mögliche Antwort → realer Effekt (`test_chat_tool_effects.py`)
+
+Für **jedes** Tool in `ChatAgent.tools` mindestens ein Erfolgs- und ein Fehlerfall, jeweils als 2-Schritt-Skript `tool_calls(...)` → `final({"reply": …})`:
+
+| LLM-Antwort (Tool-Call) | Effekt-Assertion |
+|---|---|
+| `create_file(Kulturen/Zeta.md, "abc")` | Datei existiert, Inhalt `"abc\n"`; Tool-Ergebnis im 2. Request; `session.is_successful` |
+| `create_file` auf existierenden Pfad | Datei **unverändert**; Fehlertext geht ans LLM zurück |
+| `create_file` mit neuem Ordner `Neu/Unter/X.md` | Ordner und Datei existieren |
+| `create_directory(Neu/Ordner)` | Ordner existiert, ist leer |
+| `edit_file(Technologie/Antriebe.md, "neu")` | Body ersetzt, Frontmatter identisch |
+| `move_file(a, b)` | `a` fehlt, `b` hat den Inhalt von `a` |
+| `delete_file(Kulturen/Beispielvolk.md)` | Datei weg, andere Dateien unberührt |
+| `load_files([…])` | Tool-Ergebnis enthält den Dateiinhalt; Vault **unverändert** (Snapshot-Vergleich) |
+| `ask_librarian("…")` | Librarian-Session läuft (eigenes Skript im FakeLLM); Ergebnis enthält Antwort + `Quellen:` + Volltext; bei Librarian-Fehlschlag → `"Fehler: Der Librarian …"` |
+| `web_search("…")` | FakeGenAI aufgerufen; Text + Quellen im Tool-Ergebnis |
+| `deep_reasoning(task, file_paths)` | FakeAntigravity erhält Task **plus** Dateiinhalt im Prompt |
+| `start_background_task("…")` | Job in `task_agent._jobs`; Tool-Ergebnis enthält `task_id` |
+| `check_task_status(id)` | Status/Plan/Ergebnis im Tool-Ergebnis; unbekannte ID → Fehlertext |
+| mehrere Mutationen in einer Antwort (`create_directory` + `create_file`) | beide Effekte vorhanden |
+| finale Antwort ohne Tool (Small Talk) | 1 Call, Vault unverändert |
+| halluzinierte Erstellung ohne Tool-Call → danach echter `create_file` | 1. Antwort abgelehnt, Datei erst nach dem Tool-Call vorhanden |
+
+Zusätzlich eine **Vollständigkeitsprüfung**: Ein Test vergleicht die Menge der Tool-Namen in `ChatAgent.tools` mit der Menge der in dieser Datei abgedeckten Tools (über eine Modul-Konstante `COVERED_TOOLS`). Kommt ein neues Tool hinzu, schlägt der Test fehl.
+
+---
+
+### WP5 – TaskAgent
+
+**Datei:** `agents/test_task_agent.py` (nutzt `sync_threads`)
+
+| Fall | Erwartung |
+|---|---|
+| `update_plan` → `create_file` → `update_plan(done)` → `final({"summary": …})` | Job-Status `done`; `job.plan` enthält den finalen Plan; Datei existiert; `check_task_status` enthält `[x]` und die Summary |
+| sofortiges `final` ohne Tool | abgelehnt (require_tool_call_first_round), Retry; nach Erschöpfung Status `error` mit Fehlermeldung |
+| `update_plan` mit unbekannter `task_id` | Tool-Ergebnis `"Fehler: Unbekannte task_id"` |
+| Jedes Tool aus `CONTENT_TOOLS` einmal (parametrisiert, Effekt wie WP4b) | Effekt eingetreten |
+| Exception in `run_agent_session` | Status `error`, `job.error` gesetzt, `finished_at` gesetzt |
+| `model_override` gesetzt | wird verwendet, keine Rotation |
+| ohne Override zweimal starten | zwei verschiedene Modelle aus `_MODEL_ROTATION` |
+| Iterationslimit (40) | erzwungene finale Antwort nach 39 Tool-Runden (Skript per `callable` generieren) |
+| Echter Thread (ohne `sync_threads`) | `start_background_task` kehrt sofort zurück; Job läuft und endet (mit Timeout pollen) |
+
+---
+
+### WP6 – Librarian, Summarizer, FolderSummarizer, ContextCompactor
+
+**Dateien:** `agents/test_librarian.py`, `agents/test_summarizers.py`, `agents/test_context_compactor.py`
+
+- **Librarian:** je Tool (`load_directory_summaries`, `load_file_summaries`, `load_files`) ein Effekt-Test (richtige Inhalte im Tool-Ergebnis des nächsten Requests); `final({"answer", "sources"})` → `LibrarianOutput`; Eingabe enthält Frage und ai_map; Rotation abwechselnd.
+- **Summarizer** (`process_obsidian_file`): gültige Antwort → Frontmatter der Datei aktualisiert, `.ai_map.json`-Eintrag gesetzt, danach FolderSummarizer-Call (zweiter Agent im Skript); ungültige Antwort × N → Datei **byte-identisch** unverändert, Rückgabe `False`. Input enthält `current_content`, `prev_doc_summary`.
+- **FolderSummarizer** (`process_folder_summary`): `.index.md` und Ordner-Eintrag in `.ai_map.json` geschrieben; Rückgabe `True` bei Änderung, `False` bei identischer Zusammenfassung; Fehlerfall lässt `.index.md` unverändert.
+- **ContextCompactor:** unter Schwellwert → kein Call; über Schwellwert → genau 1 Call mit `compaction_model`; System-Prompt, erste Aufgabe und letzte `keep_recent_rounds` Runden bleiben im Original; älterer Teil durch Zusammenfassung ersetzt; keine verwaisten Tool-Nachrichten; Compactor-Exception → Session bleibt unverändert und läuft weiter; `enable_context_compaction=False` → nie ein Call.
+
+---
+
+### WP7 – WebSearch & Reasoner
+
+**Dateien:** `agents/test_web_search.py`, `agents/test_reasoner.py`
+
+- **WebSearch:** Call-Argumente (`model`, Prompt enthält `SYSTEM_INSTRUCTION` und die Anfrage, `tools` enthält `GoogleSearch`, `temperature=1.0`); Quellen werden angehängt und dedupliziert (Verhalten von `_extract_sources` prüfen); leere Antwort → Fehlertext; Exception → Fehlertext, keine Exception nach außen; `_get_client` ist ein Singleton.
+- **Reasoner:** Task wird gesendet; mit `file_paths` enthält der Prompt `## Kontext aus dem Wiki` und die Dateiinhalte; leere Antwort → Fehlertext; Exception → Fehlertext; Konfiguration (`enabled_tools=[]`) wird übergeben.
+
+---
+
+### WP8 – API-Routen End-to-End (ohne `main.py`-Startup)
+
+**Datei:** `routes/test_session_routes.py`
+
+Eigene App: `app = FastAPI(); app.include_router(src.routes.router)` → `TestClient(app)`. Vorher die tatsächlichen Pfad-Präfixe in `src/routes/__init__.py` und `src/routes/session/__init__.py` nachsehen.
+
+| Szenario | Erwartung |
+|---|---|
+| `POST /session` mit *„Erstelle ein File unter Kulturen namens Zeta mit Inhalt abc“*, FakeLLM: `create_file` → `final` | HTTP 200; `reply` korrekt; `mutations == [{"tool": "create_file", "path": "Kulturen/Zeta.md", …}]`; **Datei existiert auf der Platte** |
+| Folge-Nachricht `POST /session/{id}/messages` mit `edit_file` | Datei geändert; `mutations` enthält nur die Mutationen **dieses** Turns (`since_index`) |
+| `move_file` über die Route | `mutations[].path` prüfen (aktuell wird `path` vor `new_path` bevorzugt; Erwartung mit dir klären, ggf. `xfail`) |
+| LLM liefert nie gültiges JSON | HTTP 502 |
+| unbekannte Session-ID | 404 (Verhalten von `get_session` prüfen) |
+| `DELETE /session/{id}` | Session entfernt, danach 404 |
+| `active_file` im Request | Header in der User-Nachricht des LLM-Calls |
+| Datei-Routen (`get_files`, `get_file_content`, `post_summary`) | Basistests gegen den Test-Vault; Pfad-Ausbruch abgewiesen |
+
+---
+
+### WP9 – Live-LLM-Tests (optional, standardmäßig übersprungen)
+
+**Datei:** `live/test_live_llm.py`, Marker `@pytest.mark.live`, Skip, wenn kein echter `GEMINI_API_KEY` gesetzt ist (Env `OVA_LIVE_TESTS=1`).
+
+- Echter Chat-Agent gegen den Temp-Vault, *„Erstelle eine Datei Kulturen/LiveTest.md mit dem Inhalt abc“* → Assertion: Datei existiert und enthält `abc`. Prüft das tatsächliche Modellverhalten (Tool-Wahl).
+- Wenige Szenarien (create, edit, Librarian-Frage), um das Free-Tier-Kontingent zu schonen. Aufruf: `pytest -m live`.
+
+---
+
+### WP10 – Abnahme & Coverage (sequenziell, zum Schluss)
+
+1. `.venv/bin/python -m pytest src/tests -q --cov=src --cov-report=term-missing` ausführen.
+2. Ziele: gesamt ≥ 85 %, `llm_engine.py` ≥ 95 %, `vault_mutation.py` ≥ 95 %, `agents/*` ≥ 85 % (ohne `map_maintenance`, `backup`, `rebuild`, `main` – diese in `.coveragerc` ausschließen oder separat behandeln).
+3. Vollständigkeits-Meta-Tests (WP3 Agent-Liste, WP4 `COVERED_TOOLS`) grün.
+4. Flakiness-Check: Suite 3× hintereinander und einmal in zufälliger Reihenfolge (`-p random_order`, falls installiert) laufen lassen.
+5. Bericht: Liste aller `xfail`-Bugs, Coverage-Tabelle, Laufzeit (Ziel < 30 s).
+
+---
+
+## 5. Abdeckungsmatrix (Agent × mögliche LLM-Antwort)
+
+| Antwort-Typ | Chat | Task | Librarian | Summ. | FolderSumm. | Compactor | Web | Reasoner |
+|---|---|---|---|---|---|---|---|---|
+| LLM-Call wird abgesetzt | WP3/4 | WP3/5 | WP3/6 | WP3/6 | WP3/6 | WP3/6 | WP3/7 | WP3/7 |
+| gültige finale Antwort | WP4 | WP5 | WP6 | WP6 | WP6 | WP6 | WP7 | WP7 |
+| ungültiges JSON / Retry | WP2/8 | WP5 | WP2 | WP6 | WP6 | – | – | – |
+| API-Exception | WP2 | WP5 | WP2 | WP6 | WP6 | WP6 | WP7 | WP7 |
+| leere Antwort | WP2 | – | – | – | – | WP6 | WP7 | WP7 |
+| `create_file` | WP4/8 | WP5 | – | – | – | – | – | – |
+| `create_directory` | WP4 | WP5 | – | – | – | – | – | – |
+| `edit_file` | WP4/8 | WP5 | – | – | – | – | – | – |
+| `move_file` | WP4/8 | WP5 | – | – | – | – | – | – |
+| `delete_file` | WP4 | WP5 | – | – | – | – | – | – |
+| `load_files` | WP4 | WP5 | WP6 | – | – | – | – | – |
+| `load_file_summaries` / `load_directory_summaries` | – | – | WP6 | – | – | – | – | – |
+| `ask_librarian` | WP4 | WP5 | – | – | – | – | – | – |
+| `web_search` | WP4 | WP5 | – | – | – | – | – | – |
+| `deep_reasoning` | WP4 | WP5 | – | – | – | – | – | – |
+| `start_background_task` / `check_task_status` | WP4 | – | – | – | – | – | – | – |
+| `update_plan` | – | WP5 | – | – | – | – | – | – |
+| unbekanntes Tool / kaputte Argumente | WP2 | WP2 | WP2 | – | – | – | – | – |
+| halluzinierte Mutation | WP2/4 | WP2 | – | – | – | – | – | – |
+| Iterationslimit / erzwungene Antwort | WP2 | WP5 | WP2 | – | – | – | – | – |
+
+---
+
+## 6. Hinweise zur Ausführung durch Subagenten
+
+- **Reihenfolge:** WP0 → (WP1 … WP9 parallel) → WP10.
+- **Konfliktvermeidung:** Jedes Paket schreibt nur in seine eigenen Dateien. Änderungen an `conftest.py`/`fakes/` nach WP0 nur additiv und mit Hinweis im Bericht.
+- **Prompt-Vorlage pro Subagent:** *„Lies `test_plan.md` Abschnitte 1, 3, 4 (dein Paket WPx) und 6. Setze ausschließlich WPx um. Verändere keinen Produktivcode. Liefere am Ende: Liste der erstellten Dateien, Anzahl Tests (passed/xfail), gefundene Bugs, offene Fragen.“*
+
+## 7. Offene Fragen an dich
+
+1. **`move_file`-Mutationen in der API-Antwort:** `reply_or_502` meldet `path` (Quelle) statt `new_path` (Ziel). Ist das gewollt, oder soll der Test das Ziel erwarten (dann als `xfail` markiert)?
+2. **TaskAgent-Prompt:** `delete_file` ist als Tool vorhanden, wird im System-Prompt des TaskAgent aber nicht erwähnt. Gewollt?
+3. **WP9 Live-Tests:** gewünscht? Sie verbrauchen Free-Tier-Kontingent.
+4. **Coverage-Ziele** (85 % gesamt / 95 % für Engine und Mutation) so in Ordnung?

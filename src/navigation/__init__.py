@@ -14,6 +14,7 @@ from src.navigation.vault_mutation import (
     create_file,
     edit_file,
     move_file,
+    delete_file,
 )
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "create_file",
     "edit_file",
     "move_file",
+    "delete_file",
 ]

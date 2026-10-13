@@ -9,7 +9,7 @@ Chat-Agent als Tool nutzt."""
 from google import genai
 from google.genai import types
 
-from src.logging_config import logger
+from src.core.logging_config import logger
 
 MODEL = "gemini-2.5-flash"  # unterstützt Search Grounding im Free Tier
 

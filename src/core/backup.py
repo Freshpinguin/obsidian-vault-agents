@@ -2,10 +2,13 @@ import os
 import subprocess
 import time
 from datetime import datetime
+from dotenv import load_dotenv
 
-from src.logging_config import logger
+load_dotenv()
 
-WATCH_DIR = os.getenv("WATCH_DIR", "/app/data")
+from src.core.logging_config import logger
+
+WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
 
 def run_auto_backup(interval_minutes=int(os.getenv("BACKUP_INTERVAL_MINUTES", 60 * 12))):
     """Pusht Änderungen in regelmäßigen Abständen nach GitHub."""

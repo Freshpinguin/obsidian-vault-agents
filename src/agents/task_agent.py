@@ -21,9 +21,9 @@ from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.llm_models import LLMModels
 from src.schemas.task_agent_schema import PlanStep, TaskAgentInput, TaskAgentOutput, UpdatePlanArgs
 from src.schemas.tool_schema import WikiTool
-from src.llm_engine import run_agent_session
+from src.agents.llm_engine import run_agent_session
 from src.agents.shared_tools import CONTENT_TOOLS
-from src.logging_config import logger
+from src.core.logging_config import logger
 from src.navigation import format_ai_map, load_ai_map
 
 SYSTEM_PROMPT = """Du bist der Task-Agent eines persönlichen Obsidian-Wikis (Science-Fiction-Weltenbau).

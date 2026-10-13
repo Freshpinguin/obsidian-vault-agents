@@ -2,8 +2,8 @@
 import threading
 from pathlib import Path
 
-from src.obsidian_processor import ObsidianVaultManager, process_obsidian_file, process_folder_summary
-from src.logging_config import logger
+from src.core.obsidian_processor import ObsidianVaultManager, process_obsidian_file, process_folder_summary
+from src.core.logging_config import logger
 
 DEBOUNCE_SECONDS = 30 * 60   # 30 Minuten
 

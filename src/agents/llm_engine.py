@@ -1,4 +1,4 @@
-# src/llm_engine.py
+# src/agents/llm_engine.py
 import json
 import litellm
 from litellm.utils import supports_tool_choice
@@ -6,8 +6,8 @@ from typing import Any
 
 from src.schemas.llm_models import FALLBACK_MAP, LLMModels
 from src.schemas.status import AgentStatus
-from src.logging_config import logger, SessionLogger
-from src.context_compactor import maybe_compact
+from src.core.logging_config import logger, SessionLogger
+from src.agents.context_compactor import maybe_compact
 
 from src.schemas.agent_schema import (
     WikiAgent,
@@ -73,6 +73,8 @@ def _run_turn(session: AgentSession, model_override: LLMModels | None = None) ->
 
         offer_tools = bool(tool_schemas) and not force_final_answer
         completion_kwargs = dict(model=use_model, messages=messages, fallbacks=active_fallbacks)
+        if getattr(agent, "temperature", None) is not None:
+            completion_kwargs["temperature"] = agent.temperature
         if offer_tools:
             # Function-Calling und erzwungenes response_format vertragen sich bei den
             # meisten Providern nicht gleichzeitig: solange Tools zur Verfügung stehen,
@@ -185,7 +187,29 @@ def _run_turn(session: AgentSession, model_override: LLMModels | None = None) ->
         # gültigem JSON NICHT als Erfolg werten, sondern wie einen Parse-Fehler behandeln.
         skipped_required_tool = agent.require_tool_call_first_round and tool_steps == 0
 
-        if parse_result.status == AgentStatus.SUCCESS and not skipped_required_tool:
+        # Prüfen, ob der Agent eine Dateimodifikation im Text behauptet/angekündigt hat,
+        # ohne je ein entsprechendes Werkzeug (z.B. create_file, edit_file) aufgerufen zu haben.
+        hallucinated_mutation = False
+        mutation_tool_names = {"create_file", "edit_file", "move_file", "create_directory", "delete_file"}
+        has_mutation_tools = any(t.name in mutation_tool_names for t in agent.tools)
+        if tool_steps == 0 and has_mutation_tools and parse_result.status == AgentStatus.SUCCESS:
+            reply_text = ""
+            if hasattr(parse_result.parsed_data, "reply"):
+                reply_text = str(parse_result.parsed_data.reply).lower()
+            elif isinstance(parse_result.parsed_data, dict):
+                reply_text = str(parse_result.parsed_data.get("reply", "")).lower()
+
+            mutation_indicators = [
+                "angelegt", "erstellt", "gespeichert", "bearbeitet", "verschoben", "gelöscht",
+                "lege dir", "erstelle dir", "lege die datei", "erstelle die datei",
+                "ich erstelle", "ich lege", "lösche die datei", "habe gelöscht",
+            ]
+            if any(ind in reply_text for ind in mutation_indicators) and (".md" in reply_text or "datei" in reply_text or "ordner" in reply_text):
+                negations = ["nicht angelegt", "keine datei", "konnte nicht", "nicht möglich", "nicht gefunden", "wurde nicht", "nicht gelöscht"]
+                if not any(neg in reply_text for neg in negations):
+                    hallucinated_mutation = True
+
+        if parse_result.status == AgentStatus.SUCCESS and not skipped_required_tool and not hallucinated_mutation:
             call_record = LLMCall(
                 agent_name=agent.name,
                 status=AgentStatus.SUCCESS,
@@ -205,6 +229,13 @@ def _run_turn(session: AgentSession, model_override: LLMModels | None = None) ->
                 "Deine Antwort wurde abgelehnt: Du musst für diese Aufgabe mindestens einmal ein Werkzeug "
                 "aufrufen (z.B. update_plan), bevor du eine finale Antwort gibst. Rufe jetzt zuerst das "
                 "passende Werkzeug auf, statt direkt zu antworten."
+            )
+        elif hallucinated_mutation:
+            error_report = (
+                "Deine Antwort wurde abgelehnt: Du hast im Antworttext behauptet oder angekündigt, eine Datei bzw. einen Ordner "
+                "anzulegen oder zu verändern, hast aber KEIN entsprechendes Werkzeug (z.B. create_file, edit_file) "
+                "als Tool-Call ausgeführt! Es wurde daher nichts im Vault gespeichert. "
+                "Rufe JETZT im nächsten Schritt ZUERST das passende Werkzeug (z.B. create_file) per Function-Call auf!"
             )
         else:
             error_report = parse_result.error_report

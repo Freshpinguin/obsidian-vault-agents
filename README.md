@@ -131,7 +131,7 @@ VAULT_PATH=/pfad/zum/obsidian-vault
 Ein vollständiger Erstdurchlauf über einen bestehenden Vault:
 
 ```bash
-docker compose exec world-engine python -m src.rebuild
+docker compose exec world-engine python -m src.core.rebuild
 ```
 
 ## Hinweis

@@ -1,6 +1,12 @@
 # src/schemas/chat_schema.py
 from pydantic import BaseModel, Field
 
+from src.schemas.session_schema import (
+    ChatMessageRequest,
+    ChatReplyResponse,
+    StartSessionRequest,
+)
+
 
 class ChatInput(BaseModel):
     message: str = Field(description="Die (erste) Nachricht des Nutzers im Chat.")
@@ -31,6 +37,10 @@ class EditFileArgs(BaseModel):
 class MoveFileArgs(BaseModel):
     path: str = Field(description="Vault-Pfad der zu verschiebenden/umzubenennenden bestehenden Datei.")
     new_path: str = Field(description="Neuer Vault-Pfad der Datei (muss noch nicht existieren, muss auf .md enden).")
+
+
+class DeleteFileArgs(BaseModel):
+    path: str = Field(description="Vault-Pfad der zu löschenden bestehenden .md-Datei.")
 
 
 class StartBackgroundTaskArgs(BaseModel):

@@ -1,11 +1,11 @@
-# src/map_maintenance.py
+# src/agents/map_maintenance.py
 import json
 import time
 from pathlib import Path
 
-from src.obsidian_processor import ObsidianVaultManager, is_summarizable_path
-from src.scheduler import SummaryScheduler
-from src.logging_config import logger
+from src.core.obsidian_processor import ObsidianVaultManager, is_summarizable_path
+from src.core.scheduler import SummaryScheduler
+from src.core.logging_config import logger
 
 PENDING_SUMMARY_TEXT = "Zusammenfassung ausstehend..."
 

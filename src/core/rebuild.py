@@ -1,7 +1,11 @@
 import os
-from src.core_engine import ensure_directory_index, update_ai_map
+from dotenv import load_dotenv
 
-WATCH_DIR = os.getenv("WATCH_DIR", "/app/data")
+load_dotenv()
+
+from src.core.core_engine import ensure_directory_index, update_ai_map
+
+WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
 
 def rebuild_universe():
     print(f"🚀 Starte vollständigen Scan in {WATCH_DIR}...")

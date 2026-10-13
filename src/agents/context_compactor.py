@@ -1,4 +1,4 @@
-# src/context_compactor.py
+# src/agents/context_compactor.py
 """Kontext-Kompaktierung für lange ReAct-Sessions (v.a. den Task-Agenten): Lange,
 vielschrittige Sessions sammeln pro Runde neue Tool-Aufrufe/-Ergebnisse an, und weil bei
 jedem LLM-Aufruf der KOMPLETTE bisherige Verlauf erneut gesendet wird (siehe
@@ -16,7 +16,7 @@ import json
 
 import litellm
 
-from src.logging_config import logger
+from src.core.logging_config import logger
 from src.schemas.agent_schema import AgentSession, MessageRole, SessionMessage
 from src.schemas.llm_models import LLMModels
 

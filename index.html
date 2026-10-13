@@ -3,289 +3,2699 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Obsidian Vault Agents – Chat</title>
+<title>Obsidian Vault Agents – Explorer & Chat</title>
+
+<!-- Fonts: Inter & JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Marked.js für Markdown Rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
 <style>
   :root {
-    --bg: #0f1115;
-    --panel: #171a21;
-    --border: #2a2f3a;
-    --text: #e6e8ec;
-    --muted: #8a90a0;
-    --accent: #5b8cff;
-    --accent-text: #0b0d12;
-    --error: #ff6b6b;
+    --bg-base: #0a0c10;
+    --bg-surface: #11141a;
+    --bg-panel: #161a23;
+    --bg-card: #1c212c;
+    --bg-hover: #222836;
+    --bg-active: #283042;
+
+    --border: #262d3d;
+    --border-subtle: #1c2230;
+    --border-focus: #6366f1;
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+
+    --accent: #6366f1;
+    --accent-glow: rgba(99, 102, 241, 0.25);
+    --accent-light: #818cf8;
+    --accent-dark: #4f46e5;
+
+    --green: #10b981;
+    --green-bg: rgba(16, 185, 129, 0.12);
+    --purple: #a855f7;
+    --purple-bg: rgba(168, 85, 247, 0.12);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245, 158, 11, 0.12);
+    --red: #ef4444;
+    --red-bg: rgba(239, 68, 68, 0.15);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-full: 9999px;
+
+    --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
   html, body {
     height: 100%;
-    margin: 0;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Custom Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a3346; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3b4761; }
+
+  /* App Shell Layout */
+  .app-shell {
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    width: 100vw;
   }
 
-  header {
-    padding: 1rem 1.25rem;
+  /* Top Navigation Bar */
+  header.top-nav {
+    height: 48px;
+    background: var(--bg-surface);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 0 1rem;
+    flex-shrink: 0;
+    user-select: none;
+    z-index: 20;
+  }
+
+  .nav-left, .nav-center, .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+  }
+
+  .brand-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+
+  .brand-icon svg { width: 14px; height: 14px; fill: white; }
+
+  .badge-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    background: var(--green-bg);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: var(--green);
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+  }
+
+  .beacon-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .vault-path-pill {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-base);
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+  }
+
+  .nav-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: var(--transition);
+  }
+
+  .nav-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: #3b4761;
+  }
+
+  .nav-btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .nav-btn.primary:hover {
+    background: var(--accent-dark);
+  }
+
+  /* Main 3-Column Workspace */
+  .workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Pane Bases */
+  .pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-panel);
+    position: relative;
+  }
+
+  /* LEFT PANE: File Explorer */
+  .explorer-pane {
+    width: 290px;
+    min-width: 230px;
+    max-width: 450px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-surface);
+    flex-shrink: 0;
+    transition: width 0.2s ease;
+  }
+
+  .explorer-pane.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    border-right: none;
+    overflow: hidden;
+  }
+
+  .pane-header {
+    height: 38px;
+    padding: 0 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
     flex-shrink: 0;
   }
 
-  header h1 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0;
-    letter-spacing: 0.02em;
+  .pane-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
   }
 
-  header h1 .dot {
-    color: var(--accent);
+  .pane-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
-  #new-chat {
+  .icon-btn {
     background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
+    border: none;
+    color: var(--text-muted);
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    transition: var(--transition);
   }
 
-  #new-chat:hover {
-    border-color: var(--accent);
-    color: var(--text);
+  .icon-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
   }
 
-  main {
+  .search-bar {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .search-input-wrapper svg {
+    position: absolute;
+    left: 8px;
+    width: 13px;
+    height: 13px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.35rem 0.55rem 0.35rem 1.8rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    font-family: var(--font-ui);
+    outline: none;
+    transition: var(--transition);
+  }
+
+  .search-input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
+  .tree-container {
     flex: 1;
     overflow-y: auto;
+    padding: 0.4rem 0.3rem;
+    user-select: none;
+  }
+
+  /* Tree Nodes */
+  .tree-node {
+    margin: 1px 0;
+  }
+
+  .node-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.32rem 0.5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+
+  .node-row:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .node-row.active {
+    background: var(--bg-active);
+    color: var(--accent-light);
+    font-weight: 500;
+  }
+
+  .node-chevron {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: transform 0.18s ease;
+    flex-shrink: 0;
+  }
+
+  .tree-node.expanded > .node-row > .node-chevron {
+    transform: rotate(90deg);
+  }
+
+  .node-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .node-icon.folder { color: #f59e0b; }
+  .node-icon.file { color: #818cf8; }
+
+  .node-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .node-count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .tree-children {
+    display: none;
+    padding-left: 1rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    margin-left: 0.65rem;
+  }
+
+  .tree-node.expanded > .tree-children {
+    display: block;
+  }
+
+  /* Resizer Bars */
+  .resizer {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.2s;
+    z-index: 10;
+    flex-shrink: 0;
+  }
+  .resizer:hover, .resizer.dragging {
+    background: var(--accent);
+  }
+
+  /* CENTER PANE: File Viewer / Reader */
+  .viewer-pane {
+    flex: 1;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-width: 320px;
+    background: var(--bg-base);
+  }
+
+  .viewer-topbar {
+    height: 44px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .breadcrumb-sep { color: #475569; }
+  .breadcrumb-active { color: var(--text-primary); font-weight: 500; }
+
+  .viewer-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .view-mode-switch {
+    display: flex;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+  }
+
+  .view-mode-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+  }
+
+  .view-mode-btn.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .viewer-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem 2.5rem;
+  }
+
+  /* Empty Welcome State */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    text-align: center;
+    color: var(--text-secondary);
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .empty-state-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    color: var(--accent-light);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .empty-state h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .quick-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+    text-align: left;
+  }
+
+  .quick-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .quick-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    background: var(--bg-card);
+  }
+
+  .quick-card-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .quick-card-desc {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+  }
+
+  /* File Content Display */
+  .file-container {
+    max-width: 820px;
+    margin: 0 auto;
+  }
+
+  .meta-header-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     padding: 1.25rem;
+    margin-bottom: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+
+  .meta-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .meta-filename {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .meta-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .tag-pill {
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 0.18rem 0.55rem;
+    border-radius: var(--radius-full);
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-light);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+  }
+
+  .meta-dates {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  /* AI Summary Box */
+  .ai-callout {
+    background: linear-gradient(145deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .ai-callout-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-light);
+  }
+
+  .ai-callout-header svg { width: 14px; height: 14px; }
+
+  .ai-callout-body {
+    font-size: 0.86rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+  }
+
+  /* Wikilinks & Relations */
+  .wikilinks-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+
+  .wikilink-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--purple);
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    text-decoration: none;
+    transition: var(--transition);
+  }
+
+  .wikilink-chip:hover {
+    border-color: var(--purple);
+    background: var(--purple-bg);
+  }
+
+  /* Markdown Rendered Typography */
+  .markdown-body {
+    line-height: 1.65;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+  }
+
+  .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+    color: var(--text-primary);
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .markdown-body h1 { font-size: 1.6rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  .markdown-body h2 { font-size: 1.25rem; }
+  .markdown-body h3 { font-size: 1.05rem; }
+
+  .markdown-body p { margin-bottom: 1rem; }
+
+  .markdown-body ul, .markdown-body ol {
+    margin-bottom: 1rem;
+    padding-left: 1.4rem;
+  }
+
+  .markdown-body li { margin-bottom: 0.25rem; }
+
+  .markdown-body blockquote {
+    border-left: 3px solid var(--accent);
+    background: rgba(99, 102, 241, 0.05);
+    padding: 0.6rem 1rem;
+    margin: 1rem 0;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--text-secondary);
+  }
+
+  .markdown-body code {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    padding: 0.15rem 0.35rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    color: #f43f5e;
+  }
+
+  .markdown-body pre {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+
+  .markdown-body pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #e2e8f0;
+    font-size: 0.85rem;
+  }
+
+  /* Inline Wikilinks in document */
+  .wikilink {
+    color: var(--accent-light);
+    background: rgba(99, 102, 241, 0.1);
+    border-bottom: 1px dashed var(--accent);
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .wikilink:hover {
+    background: rgba(99, 102, 241, 0.25);
+    border-bottom-style: solid;
+  }
+
+  /* Raw Source View & Interactive Editor */
+  .btn-danger-icon:hover {
+    color: var(--red) !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+  }
+
+  .nav-btn.btn-danger {
+    background: var(--red);
+    color: white;
+    border-color: var(--red);
+  }
+
+  .nav-btn.btn-danger:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+  }
+
+  #btn-save-content.unsaved {
+    background: #d97706;
+    border-color: #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+  }
+
+  .editor-pane-container {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-top: 0.5rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0.85rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.74rem;
+    color: var(--text-muted);
+  }
+
+  .editor-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+
+  .editor-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+
+  .editor-status-dot.unsaved {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
+  }
+
+  .editor-shortcuts-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .editor-shortcuts-hint kbd {
+    background: var(--bg-base);
+    color: var(--text-secondary);
+    padding: 0.12rem 0.35rem;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+  }
+
+  .editor-textarea {
+    width: 100%;
+    min-height: 520px;
+    height: 60vh;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 1rem;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    line-height: 1.65;
+    resize: vertical;
+    box-sizing: border-box;
+    tab-size: 2;
+  }
+
+  .editor-textarea:focus {
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .raw-editor-view {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    padding: 1rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #cbd5e1;
+    overflow-x: auto;
+  }
+
+
+  /* RIGHT PANE: Chat Assistant */
+  .chat-pane {
+    width: 410px;
+    min-width: 320px;
+    max-width: 600px;
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    transition: width 0.2s ease;
+  }
+
+  .chat-pane.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden;
+  }
+
+  .chat-header {
+    height: 48px;
+    border-bottom: 1px solid var(--border);
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-surface);
+    flex-shrink: 0;
+  }
+
+  .chat-header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .chat-context-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    max-width: 140px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--bg-base);
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chat-context-pill.has-file {
+    color: var(--accent-light);
+    border-color: rgba(99, 102, 241, 0.4);
+    background: rgba(99, 102, 241, 0.1);
+  }
+
+  .chat-file-context-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--accent-light);
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 0.28rem 0.6rem;
+    margin-bottom: 0.45rem;
+    animation: fadeIn 0.18s ease;
+  }
+
+  .chat-file-context-banner.active {
+    display: flex;
+  }
+
+  .chat-file-context-banner .banner-left {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chat-file-context-banner .banner-tag {
+    font-size: 0.62rem;
+    color: var(--accent-light);
+    background: rgba(99, 102, 241, 0.18);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .msg-item {
+    display: flex;
+    flex-direction: column;
+    max-width: 88%;
+    animation: fadeIn 0.15s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-item.user {
+    align-self: flex-end;
+  }
+
+  .msg-item.assistant {
+    align-self: flex-start;
+    max-width: 95%;
+  }
+
+  .msg-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .msg-item.user .msg-bubble {
+    background: var(--accent);
+    color: white;
+    border-bottom-right-radius: 2px;
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+
+  .msg-item.assistant .msg-bubble {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-bottom-left-radius: 2px;
+  }
+
+  .msg-item.system .msg-bubble {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    text-align: center;
+    width: 100%;
+  }
+
+  .msg-item.error .msg-bubble {
+    background: var(--red-bg);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+  }
+
+  /* Thinking Animation */
+  .thinking-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    width: fit-content;
+  }
+
+  .thinking-dots {
+    display: flex;
+    gap: 3px;
+  }
+
+  .thinking-dot {
+    width: 4px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Chat Input Footer */
+  .chat-footer {
+    padding: 0.75rem 1rem;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    background: var(--bg-base);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.75rem;
+    transition: var(--transition);
+  }
+
+  .chat-form:focus-within {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
+  .chat-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
+    line-height: 1.4;
+    resize: none;
+    max-height: 140px;
+    min-height: 22px;
+    outline: none;
+  }
+
+  .chat-form-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.3rem;
+  }
+
+  .chat-hints {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+  }
+
+  .chat-send-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .chat-send-btn:hover:not(:disabled) {
+    background: var(--accent-dark);
+    transform: scale(1.05);
+  }
+
+  .chat-send-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Toast Notifications */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.6rem 1.1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.82rem;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: toastSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+  }
+
+  .toast.success {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: #0d1a15;
+    color: #34d399;
+  }
+
+  .toast.error {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: #1e1113;
+    color: #f87171;
+  }
+
+  @keyframes toastSlideUp {
+    from { opacity: 0; transform: translateY(12px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Button Spinner */
+  .btn-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: btnSpin 0.75s linear infinite;
+    display: inline-block;
+  }
+
+  @keyframes btnSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  .btn-summary-magic {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+  }
+
+  .btn-summary-magic:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-summary-magic:disabled {
+    opacity: 0.65;
+    cursor: wait;
+    transform: none;
+  }
+
+  /* ==========================================
+     Settings / Optionen Modal & Toggles
+     ========================================== */
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+    padding: 1rem;
+  }
+
+  .modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.96) translateY(10px);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modal-backdrop.open .modal-card {
+    transform: scale(1) translateY(0);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.15rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-panel);
+  }
+
+  .modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .modal-title svg {
+    color: var(--accent-light);
+  }
+
+  .modal-body {
+    padding: 1.25rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .settings-section {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    max-width: 720px;
-    width: 100%;
-    margin: 0 auto;
   }
 
-  .msg {
-    max-width: 80%;
-    padding: 0.65rem 0.9rem;
-    border-radius: 12px;
-    line-height: 1.45;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    font-size: 0.95rem;
+  .settings-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent-light);
   }
 
-  .msg.user {
-    align-self: flex-end;
-    background: var(--accent);
-    color: var(--accent-text);
-    border-bottom-right-radius: 3px;
+  .settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: var(--transition);
   }
 
-  .msg.assistant {
-    align-self: flex-start;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 3px;
+  .settings-item:hover {
+    border-color: var(--border);
+    background: var(--bg-card);
   }
 
-  .msg.system {
-    align-self: center;
-    color: var(--muted);
-    font-size: 0.8rem;
-    background: none;
-    border: none;
-    text-align: center;
+  .settings-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 
-  .msg.error {
-    align-self: flex-start;
-    background: rgba(255, 107, 107, 0.1);
-    border: 1px solid var(--error);
-    color: var(--error);
-    border-bottom-left-radius: 3px;
+  .settings-label {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-primary);
   }
 
-  .msg.pending {
-    align-self: flex-start;
-    color: var(--muted);
-    font-style: italic;
-    background: none;
-    border: none;
-    padding-left: 0.1rem;
+  .settings-desc {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    line-height: 1.35;
   }
 
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 1rem 1.25rem;
+  /* iOS Style Switch */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
     flex-shrink: 0;
   }
 
-  form {
-    max-width: 720px;
-    margin: 0 auto;
-    display: flex;
-    gap: 0.6rem;
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
   }
 
-  #message-input {
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.7rem 0.9rem;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    resize: none;
-    font-family: inherit;
-  }
-
-  #message-input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  #send-btn {
-    background: var(--accent);
-    color: var(--accent-text);
-    border: none;
-    padding: 0 1.2rem;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 600;
+  .slider {
+    position: absolute;
     cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #2b3345;
+    transition: .22s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  #send-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #ffffff;
+    transition: .22s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   }
 
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f5f6f8;
-      --panel: #ffffff;
-      --border: #e0e2e8;
-      --text: #1a1d23;
-      --muted: #6b7280;
-      --accent: #3b63e0;
-      --accent-text: #ffffff;
-    }
+  input:checked + .slider {
+    background-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
   }
+
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+
+  .font-size-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent-light);
+  }
+
+  .modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.4rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-panel);
+  }
+
+  .modal-footer-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* Floating Settings Button am Rand */
+  .floating-settings-btn {
+    position: fixed;
+    bottom: 1.25rem;
+    left: 1.25rem;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 90;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: var(--transition);
+  }
+
+  .floating-settings-btn:hover {
+    color: var(--accent-light);
+    border-color: var(--accent);
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px var(--accent-glow);
+  }
+
+  /* Body toggle helper classes */
+  body.hide-file-metadata .meta-header-box {
+    display: none !important;
+  }
+
+  body.hide-ai-summary #doc-ai-box {
+    display: none !important;
+  }
+
+  body.hide-wikilinks #doc-wikilinks {
+    display: none !important;
+  }
+
+  /* Editor font size classes */
+  body.font-compact .markdown-body { font-size: 0.88rem; line-height: 1.55; }
+  body.font-large .markdown-body { font-size: 1.05rem; line-height: 1.75; }
+
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  .icon-btn.spinning svg { animation: spin 0.75s linear infinite; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1><span class="dot">●</span> Obsidian Vault Agents</h1>
-  <button id="new-chat" type="button">Neuer Chat</button>
-</header>
+<div class="app-shell">
+  <!-- Top Nav Bar -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <span>Obsidian Vault Agents</span>
+      </div>
+    </div>
 
-<main id="messages">
-  <div class="msg system">Schreib eine Nachricht, um den Chat zu starten.</div>
-</main>
+    <div class="nav-center"></div>
 
-<footer>
-  <form id="chat-form">
-    <textarea id="message-input" rows="1" placeholder="Frag etwas zum Vault…" autofocus></textarea>
-    <button id="send-btn" type="submit">Senden</button>
-  </form>
-</footer>
+    <div class="nav-right">
+      <button class="nav-btn" id="btn-toggle-explorer" title="Explorer umschalten">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        <span>Explorer</span>
+      </button>
+
+      <button class="nav-btn" id="btn-toggle-chat" title="Chat umschalten">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>Chat</span>
+      </button>
+
+      <button class="nav-btn" id="btn-open-settings" title="Optionen & Anzeige">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        <span>Optionen</span>
+      </button>
+
+      <button class="nav-btn primary" id="btn-new-chat" title="Neue Chat-Session starten">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Neuer Chat</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace Container -->
+  <div class="workspace">
+    <!-- LEFT: Explorer Pane -->
+    <aside class="pane explorer-pane" id="explorer-pane">
+      <div class="pane-header">
+        <span class="pane-title">Dateien & Ordner</span>
+        <div class="pane-actions">
+          <button class="icon-btn" id="btn-expand-all" title="Alle aufklappen">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-collapse-all" title="Alle zuklappen">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-refresh-tree" title="Aktualisieren">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-explorer-settings" title="Optionen & Anzeige">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <div class="search-input-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" id="explorer-search" placeholder="Dateien filtern…">
+        </div>
+      </div>
+
+      <div class="tree-container" id="file-tree">
+        <!-- Dynamischer Dateibaum -->
+      </div>
+    </aside>
+
+    <!-- Resizer 1 -->
+    <div class="resizer" id="resizer-1"></div>
+
+    <!-- CENTER: File Viewer Pane -->
+    <main class="pane viewer-pane" id="viewer-pane">
+      <div class="viewer-topbar">
+        <div class="breadcrumbs" id="breadcrumbs">
+          <span>Vault</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-active" id="bc-filename">Keine Datei geöffnet</span>
+        </div>
+
+        <div class="viewer-controls" id="viewer-controls" style="display: none;">
+          <div class="view-mode-switch">
+            <button class="view-mode-btn active" id="btn-mode-rendered" title="Leseansicht (Markdown gerendert)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <span>Gerendert</span>
+            </button>
+            <button class="view-mode-btn" id="btn-mode-raw" title="Editor (Quelltext & manuelle Bearbeitung)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              <span>Bearbeiten</span>
+            </button>
+          </div>
+
+          <button class="nav-btn primary" id="btn-save-content" title="Änderungen speichern (Cmd/Strg+S)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span id="btn-save-label">Speichern</span>
+          </button>
+
+          <button class="icon-btn" id="btn-copy-content" title="Inhalt in die Zwischenablage kopieren">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+
+          <button class="icon-btn btn-danger-icon" id="btn-delete-file" title="Diese Notiz löschen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </button>
+        </div>
+
+      </div>
+
+      <div class="viewer-scroll-area">
+        <!-- Willkommens-Dashboard bei leerem Stand -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-state-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <h2>Obsidian Vault Explorer</h2>
+          <p>Wähle links eine Notiz aus dem Explorer aus, um ihren Inhalt, Verknüpfungen und KI-Zusammenfassungen zu lesen, oder chatte rechts direkt mit dem Librarian-Agenten.</p>
+
+          <div class="quick-cards" id="quick-cards">
+            <!-- Schnellauswahl wird dynamisch gefüllt -->
+          </div>
+        </div>
+
+        <!-- Aktive Datei-Ansicht -->
+        <div class="file-container" id="file-container" style="display: none;">
+          <div class="meta-header-box">
+            <div class="meta-top">
+              <div class="meta-filename" id="doc-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" color="#818cf8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span id="doc-title-text">Dokument.md</span>
+              </div>
+              <div class="meta-dates" id="doc-dates">Geändert: -</div>
+            </div>
+
+            <div class="meta-tags" id="doc-tags"></div>
+
+            <div class="ai-callout" id="doc-ai-box">
+              <div class="ai-callout-header" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.45rem;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                  <span>KI-Zusammenfassung</span>
+                </div>
+                <button class="icon-btn" id="btn-refresh-summary-callout" title="Zusammenfassung neu generieren" style="width: 22px; height: 22px;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                </button>
+              </div>
+              <div class="ai-callout-body" id="doc-ai-summary"></div>
+            </div>
+
+            <div class="wikilinks-bar" id="doc-wikilinks" style="display: none;">
+              <span>Verknüpfte Notizen:</span>
+              <div id="doc-wikilinks-list" style="display: flex; gap: 0.35rem; flex-wrap: wrap;"></div>
+            </div>
+          </div>
+
+          <!-- Gerenderter Markdown-Inhalt -->
+          <div class="markdown-body" id="doc-body-rendered"></div>
+
+          <!-- Quelltext / Bearbeiten Editor -->
+          <div class="editor-pane-container" id="doc-editor-container" style="display: none;">
+            <div class="editor-toolbar">
+              <div class="editor-status" id="editor-status-bar">
+                <span class="editor-status-dot" id="editor-status-dot"></span>
+                <span id="editor-status-text">Bereit zum Bearbeiten</span>
+              </div>
+              <div class="editor-shortcuts-hint">
+                <kbd>Cmd</kbd>/<kbd>Strg</kbd>+<kbd>S</kbd> zum Speichern
+              </div>
+            </div>
+            <textarea class="editor-textarea" id="doc-body-editor" spellcheck="false" placeholder="Hier Text eingeben oder löschen..."></textarea>
+          </div>
+          <pre class="raw-editor-view" id="doc-body-raw" style="display: none;"></pre>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- Resizer 2 -->
+    <div class="resizer" id="resizer-2"></div>
+
+    <!-- RIGHT: AI Chat Pane -->
+    <aside class="pane chat-pane" id="chat-pane">
+      <div class="chat-header">
+        <div class="chat-header-title">
+          <div class="brand-icon" style="width: 20px; height: 20px;">
+            <svg viewBox="0 0 24 24" style="width: 12px; height: 12px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <span>Vault Agent</span>
+        </div>
+
+        <div class="chat-context-pill" id="active-file-pill" title="Keine Datei ausgewählt">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+          <span id="active-file-pill-text">Kein Fokus</span>
+        </div>
+      </div>
+
+      <div class="messages-container" id="messages">
+        <div class="msg-item assistant">
+          <div class="msg-bubble">
+            Hallo! Ich bin dein <strong>Vault-Agent</strong>. Du kannst mich alles über deinen Obsidian-Vault fragen, Notizen analysieren lassen oder neue Einträge recherchieren. Wähle links eine Notiz aus oder tippe direkt los!
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-footer">
+        <div class="chat-file-context-banner" id="chat-file-context-banner">
+          <div class="banner-left">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span id="chat-context-banner-text">Keine Datei ausgewählt</span>
+          </div>
+          <span class="banner-tag">ai_map aktiv</span>
+        </div>
+        <form class="chat-form" id="chat-form">
+          <textarea class="chat-textarea" id="message-input" rows="1" placeholder="Frag den Agenten nach Notizen, Verknüpfungen…"></textarea>
+          <div class="chat-form-bottom">
+            <span class="chat-hints">Enter zum Senden • Shift+Enter für neue Zeile</span>
+            <button type="submit" class="chat-send-btn" id="send-btn" title="Senden">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Floating Settings Button am linken Rand -->
+<button class="floating-settings-btn" id="btn-floating-settings" title="Optionen & Anzeige öffnen">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+</button>
+
+<!-- Modal: Optionen & Einstellungen -->
+<div class="modal-backdrop" id="settings-modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        <span>Optionen & Anzeige</span>
+      </div>
+      <button class="icon-btn" id="btn-close-settings" title="Schließen" onclick="window.closeSettingsModal && window.closeSettingsModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="settings-section">
+        <div class="settings-section-title">Dokumenten-Ansicht</div>
+
+        <div class="settings-item">
+          <div class="settings-info">
+            <span class="settings-label">Metadaten-Block anzeigen</span>
+            <span class="settings-desc">Blendet den gesamten Infobereich (Titel, Datum, Tags, KI-Zusammenfassung & Verlinkungen) über der Datei ein oder aus.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-metadata" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-item">
+          <div class="settings-info">
+            <span class="settings-label">KI-Zusammenfassung einblenden</span>
+            <span class="settings-desc">Zeigt die violette KI-Kurzzusammenfassung im oberen Dateikopf an.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-ai-summary" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-item">
+          <div class="settings-info">
+            <span class="settings-label">Verknüpfte Notizen ([[Wikilinks]])</span>
+            <span class="settings-desc">Zeigt ausgehende Querverweise und Links im Dateikopf an.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-show-wikilinks" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Dateibaum & Synchronisation</div>
+
+        <div class="settings-item">
+          <div class="settings-info">
+            <span class="settings-label">Echtzeit Live-Sync (SSE)</span>
+            <span class="settings-desc">Aktualisiert die Sidebar automatisch, sobald der Agent oder Obsidian Notizen anlegt oder ändert.</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-live-sync" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">KI-Zusammenfassungen (Vault)</div>
+        <div class="settings-item" style="flex-direction: column; align-items: flex-start; gap: 0.65rem;">
+          <div class="settings-info">
+            <span class="settings-label">Fehlende Zusammenfassungen generieren</span>
+            <span class="settings-desc">Scannt alle Notizen und Ordner im gesamten Vault und erstellt automatisch KI-Zusammenfassungen für alle Einträge, bei denen sie noch fehlen.</span>
+          </div>
+          <button class="nav-btn primary" id="btn-build-missing-summaries" style="width: 100%; justify-content: center; gap: 0.5rem; padding: 0.55rem 1rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            <span id="btn-build-missing-text">Fehlende Zusammenfassungen erstellen</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Editor Lesegröße</div>
+        <div class="settings-item" style="flex-direction: column; align-items: flex-start; gap: 0.6rem;">
+          <span class="settings-desc">Wähle die angenehmste Textgröße für das Lesen von Markdown-Dateien:</span>
+          <div style="display: flex; gap: 0.5rem; width: 100%;">
+            <button class="nav-btn font-size-btn" data-size="compact" style="flex: 1; justify-content: center;">Kompakt</button>
+            <button class="nav-btn font-size-btn active" data-size="normal" style="flex: 1; justify-content: center;">Standard</button>
+            <button class="nav-btn font-size-btn" data-size="large" style="flex: 1; justify-content: center;">Groß</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <span class="modal-footer-note">Einstellungen werden automatisch im Browser gesichert.</span>
+      <button class="nav-btn primary" id="btn-save-settings-close" onclick="window.closeSettingsModal && window.closeSettingsModal()">Fertig</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Notiz löschen Bestätigung -->
+<div class="modal-backdrop" id="delete-modal">
+  <div class="modal-card" style="max-width: 440px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color: var(--red);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <span>Notiz endgültig löschen?</span>
+      </div>
+      <button class="icon-btn" id="btn-close-delete-modal" title="Abbrechen" onclick="window.closeDeleteModal && window.closeDeleteModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+        Möchtest du die Datei <strong id="delete-file-name" style="color: var(--text-primary); font-family: var(--font-mono);">Dokument.md</strong> wirklich aus deinem Obsidian-Vault löschen?
+      </p>
+      <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-sm); padding: 0.65rem 0.85rem; font-size: 0.78rem; color: #fca5a5; display: flex; align-items: center; gap: 0.5rem;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Diese Aktion kann nicht rückgängig gemacht werden.</span>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="justify-content: flex-end; gap: 0.5rem;">
+      <button class="nav-btn" id="btn-cancel-delete" onclick="window.closeDeleteModal && window.closeDeleteModal()">Abbrechen</button>
+      <button class="nav-btn btn-danger" id="btn-confirm-delete">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <span id="btn-confirm-delete-text">Löschen</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
 
 <script>
 (() => {
+  // Globaler Anwendungszustand
   let sessionId = null;
-  let sending = false;
+  let isSending = false;
+  let currentFile = null;
+  let currentFileRawContent = "";
+  let currentFileAiSummary = "";
+  let viewMode = "rendered"; // 'rendered' oder 'raw'
+  let vaultTreeData = null;
+  let expandedFolders = new Set();
 
+  // DOM-Elemente
+  const fileTreeEl = document.getElementById("file-tree");
+  const explorerSearchInput = document.getElementById("explorer-search");
+  const emptyStateEl = document.getElementById("empty-state");
+  const fileContainerEl = document.getElementById("file-container");
+  const viewerControlsEl = document.getElementById("viewer-controls");
+  const bcFilenameEl = document.getElementById("bc-filename");
+  const docTitleTextEl = document.getElementById("doc-title-text");
+  const docDatesEl = document.getElementById("doc-dates");
+  const docTagsEl = document.getElementById("doc-tags");
+  const docAiBoxEl = document.getElementById("doc-ai-box");
+  const docAiSummaryEl = document.getElementById("doc-ai-summary");
+  const docWikilinksEl = document.getElementById("doc-wikilinks");
+  const docWikilinksListEl = document.getElementById("doc-wikilinks-list");
+  const docBodyRenderedEl = document.getElementById("doc-body-rendered");
+  const docBodyRawEl = document.getElementById("doc-body-raw");
+  const activeFilePill = document.getElementById("active-file-pill");
+  const activeFilePillText = document.getElementById("active-file-pill-text");
+  const chatFileContextBanner = document.getElementById("chat-file-context-banner");
+  const chatContextBannerText = document.getElementById("chat-context-banner-text");
+  const quickCardsEl = document.getElementById("quick-cards");
+
+  // Chat-Elemente
   const messagesEl = document.getElementById("messages");
-  const formEl = document.getElementById("chat-form");
-  const inputEl = document.getElementById("message-input");
-  const sendBtn = document.getElementById("send-btn");
-  const newChatBtn = document.getElementById("new-chat");
+  const chatFormEl = document.getElementById("chat-form");
+  const messageInputEl = document.getElementById("message-input");
+  const sendBtnEl = document.getElementById("send-btn");
+  const newChatBtn = document.getElementById("btn-new-chat");
 
-  function addMessage(role, text) {
-    const el = document.createElement("div");
-    el.className = `msg ${role}`;
-    el.textContent = text;
-    messagesEl.appendChild(el);
+  // Pane-Toggles
+  const explorerPane = document.getElementById("explorer-pane");
+  const chatPane = document.getElementById("chat-pane");
+  const btnToggleExplorer = document.getElementById("btn-toggle-explorer");
+  const btnToggleChat = document.getElementById("btn-toggle-chat");
+  const btnExpandAll = document.getElementById("btn-expand-all");
+  const btnCollapseAll = document.getElementById("btn-collapse-all");
+  const btnRefreshTree = document.getElementById("btn-refresh-tree");
+
+  // View-Mode Umschalter & Editor
+  const btnModeRendered = document.getElementById("btn-mode-rendered");
+  const btnModeRaw = document.getElementById("btn-mode-raw");
+  const btnSaveContent = document.getElementById("btn-save-content");
+  const btnSaveLabel = document.getElementById("btn-save-label");
+  const btnCopyContent = document.getElementById("btn-copy-content");
+  const btnDeleteFile = document.getElementById("btn-delete-file");
+
+  const docEditorContainerEl = document.getElementById("doc-editor-container");
+  const docBodyEditorEl = document.getElementById("doc-body-editor");
+  const editorStatusDotEl = document.getElementById("editor-status-dot");
+  const editorStatusTextEl = document.getElementById("editor-status-text");
+
+  // Lösch-Modal
+  const deleteModal = document.getElementById("delete-modal");
+  const deleteFileNameEl = document.getElementById("delete-file-name");
+  const btnConfirmDelete = document.getElementById("btn-confirm-delete");
+  const btnCancelDelete = document.getElementById("btn-cancel-delete");
+  const btnCloseDeleteModal = document.getElementById("btn-close-delete-modal");
+
+  let isSavingFile = false;
+  let isDeletingFile = false;
+
+  // Summary-Aktionen
+  const btnRefreshSummaryCallout = document.getElementById("btn-refresh-summary-callout");
+  const btnBuildMissingSummaries = document.getElementById("btn-build-missing-summaries");
+  const btnBuildMissingText = document.getElementById("btn-build-missing-text");
+  const toastContainerEl = document.getElementById("toast-container");
+  let isRequestingSummary = false;
+
+
+  // ==========================================
+  // 1. Markdown & Wikilinks Parser
+  // ==========================================
+  function renderMarkdown(md) {
+    if (!md) return "";
+    // Konvertiere Obsidian-Wikilinks: [[Ziel]] oder [[Ziel|Label]]
+    const withWikilinks = md.replace(/\[\[(.*?)\]\]/g, (match, inner) => {
+      const parts = inner.split("|");
+      const target = parts[0].trim();
+      const label = parts[1] ? parts[1].trim() : target;
+      return `<a href="javascript:void(0)" class="wikilink" data-wikilink="${escapeHtml(target)}">${escapeHtml(label)}</a>`;
+    });
+
+    if (window.marked && typeof window.marked.parse === "function") {
+      return window.marked.parse(withWikilinks);
+    }
+    // Einfacher Fallback-Renderer
+    return `<div style="white-space: pre-wrap;">${escapeHtml(withWikilinks)}</div>`;
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // ==========================================
+  // 2. Dateibaum laden & darstellen
+  // ==========================================
+  async function loadFileTree() {
+    try {
+      const res = await fetch("/files");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      vaultTreeData = data;
+
+      if (data.root_path) {
+        const rootEl = document.getElementById("vault-root-path");
+        if (rootEl) {
+          const parts = data.root_path.split("/");
+          rootEl.textContent = parts.slice(-2).join("/");
+        }
+      }
+
+      // Bei erstem Laden alle Hauptordner expandieren
+      if (expandedFolders.size === 0 && data.items) {
+        data.items.forEach(item => {
+          if (item.type === "directory") expandedFolders.add(item.path);
+        });
+      }
+
+      renderTree(explorerSearchInput ? explorerSearchInput.value : "");
+      renderQuickCards(data);
+    } catch (err) {
+      fileTreeEl.innerHTML = `
+        <div style="padding: 1rem; color: var(--red); font-size: 0.8rem;">
+          Fehler beim Laden des Vaults: ${escapeHtml(err.message)}
+        </div>
+      `;
+    }
+  }
+
+  function renderTree(filterText = "") {
+    if (!vaultTreeData || !vaultTreeData.items) return;
+    const filter = filterText.trim().toLowerCase();
+    fileTreeEl.innerHTML = "";
+
+    const domList = buildTreeDOM(vaultTreeData.items, filter);
+    if (domList.length === 0) {
+      fileTreeEl.innerHTML = `<div style="padding: 0.75rem; color: var(--text-muted); font-size: 0.78rem;">Keine passenden Dateien gefunden.</div>`;
+    } else {
+      domList.forEach(node => fileTreeEl.appendChild(node));
+    }
+  }
+
+  function buildTreeDOM(items, filter = "") {
+    const nodes = [];
+
+    for (const item of items) {
+      const isDir = item.type === "directory";
+      const matchesSelf = item.name.toLowerCase().includes(filter);
+
+      if (isDir) {
+        const childNodes = buildTreeDOM(item.children || [], filter);
+        // Ordner anzeigen wenn Name passt oder ein Kind passt
+        if (!filter || matchesSelf || childNodes.length > 0) {
+          const folderNode = document.createElement("div");
+          const isExpanded = filter ? true : expandedFolders.has(item.path);
+          folderNode.className = `tree-node folder-node ${isExpanded ? "expanded" : ""}`;
+
+          const row = document.createElement("div");
+          row.className = "node-row";
+          row.title = item.ai_summary || item.path;
+
+          row.innerHTML = `
+            <span class="node-chevron">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+            <span class="node-icon folder">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <span class="node-label">${escapeHtml(item.name)}</span>
+            <span class="node-count">${(item.children || []).length}</span>
+          `;
+
+          row.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (expandedFolders.has(item.path)) {
+              expandedFolders.delete(item.path);
+              folderNode.classList.remove("expanded");
+            } else {
+              expandedFolders.add(item.path);
+              folderNode.classList.add("expanded");
+            }
+          });
+
+          const childrenContainer = document.createElement("div");
+          childrenContainer.className = "tree-children";
+          childNodes.forEach(c => childrenContainer.appendChild(c));
+
+          folderNode.appendChild(row);
+          folderNode.appendChild(childrenContainer);
+          nodes.push(folderNode);
+        }
+      } else {
+        // Datei
+        if (!filter || matchesSelf) {
+          const fileNode = document.createElement("div");
+          fileNode.className = "tree-node file-node";
+
+          const row = document.createElement("div");
+          row.className = `node-row ${currentFile === item.path ? "active" : ""}`;
+          row.dataset.path = item.path;
+          row.title = item.ai_summary || item.name;
+
+          row.innerHTML = `
+            <span style="width: 14px;"></span>
+            <span class="node-icon file">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </span>
+            <span class="node-label">${escapeHtml(item.name)}</span>
+          `;
+
+          row.addEventListener("click", () => {
+            loadFileContent(item.path);
+          });
+
+          fileNode.appendChild(row);
+          nodes.push(fileNode);
+        }
+      }
+    }
+
+    return nodes;
+  }
+
+  function renderQuickCards(treeData) {
+    if (!quickCardsEl) return;
+    quickCardsEl.innerHTML = "";
+
+    // Finde bis zu 4 Notizen für das Schnellstart-Dashboard
+    const sampleFiles = [];
+    function collect(items) {
+      for (const it of items) {
+        if (it.type === "file") sampleFiles.push(it);
+        else if (it.children) collect(it.children);
+      }
+    }
+    collect(treeData.items || []);
+
+    sampleFiles.slice(0, 4).forEach(file => {
+      const card = document.createElement("div");
+      card.className = "quick-card";
+      card.innerHTML = `
+        <div class="quick-card-title">📝 ${escapeHtml(file.name)}</div>
+        <div class="quick-card-desc">${escapeHtml(file.ai_summary || "Klicke zum Öffnen")}</div>
+      `;
+      card.addEventListener("click", () => loadFileContent(file.path));
+      quickCardsEl.appendChild(card);
+    });
+  }
+
+  // ==========================================
+  // 3. Dateiinhalt laden & anzeigen
+  // ==========================================
+  async function loadFileContent(filePath) {
+    try {
+      // Markiere im Baum
+      document.querySelectorAll(".node-row.active").forEach(el => el.classList.remove("active"));
+      const activeEl = document.querySelector(`.node-row[data-path="${CSS.escape(filePath)}"]`);
+      if (activeEl) activeEl.classList.add("active");
+
+      const res = await fetch(`/files/content?path=${encodeURIComponent(filePath)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      currentFile = data.path;
+      currentFileRawContent = data.raw_content;
+      currentFileAiSummary = data.ai_summary || "";
+
+      // Chat-Fokus und Kontext-Banner aktualisieren
+      if (chatFileContextBanner && chatContextBannerText) {
+        chatFileContextBanner.classList.add("active");
+        chatContextBannerText.textContent = `Aktive Notiz: ${data.name || data.path}`;
+      }
+      if (activeFilePill && activeFilePillText) {
+        activeFilePill.classList.add("has-file");
+        activeFilePill.title = `Aktiver Fokus: ${data.path}\nai_map: ${data.ai_summary || "keine Zusammenfassung"}`;
+        activeFilePillText.textContent = data.name || data.path.split("/").pop();
+      }
+
+      // Header & Breadcrumbs aktualisieren
+      emptyStateEl.style.display = "none";
+      fileContainerEl.style.display = "block";
+      viewerControlsEl.style.display = "flex";
+
+      const segments = data.path.split("/");
+      bcFilenameEl.textContent = segments.join(" / ");
+      docTitleTextEl.textContent = data.name;
+      docDatesEl.textContent = `Zuletzt geändert: ${data.last_modified || "unbekannt"}`;
+
+      // Tags
+      docTagsEl.innerHTML = "";
+      if (data.tags && data.tags.length > 0) {
+        data.tags.forEach(tag => {
+          const pill = document.createElement("span");
+          pill.className = "tag-pill";
+          pill.textContent = `#${tag}`;
+          docTagsEl.appendChild(pill);
+        });
+      }
+
+      // KI-Zusammenfassung Box
+      if (data.ai_summary) {
+        docAiSummaryEl.textContent = data.ai_summary;
+      } else {
+        docAiSummaryEl.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">Noch keine Zusammenfassung hinterlegt. Klicke auf das Aktualisieren-Symbol (↻), um eine KI-Zusammenfassung zu generieren.</span>`;
+      }
+      docAiBoxEl.style.display = "flex";
+
+      // Verknüpfte Notizen
+      docWikilinksListEl.innerHTML = "";
+      if (data.linked_files && data.linked_files.length > 0) {
+        data.linked_files.forEach(link => {
+          const chip = document.createElement("a");
+          chip.className = "wikilink-chip";
+          chip.textContent = `[[${link}]]`;
+          chip.href = "javascript:void(0)";
+          chip.addEventListener("click", () => loadFileContent(link));
+          docWikilinksListEl.appendChild(chip);
+        });
+        docWikilinksEl.style.display = "flex";
+      } else {
+        docWikilinksEl.style.display = "none";
+      }
+
+      // Inhalt rendern & im Editor bereitstellen
+      docBodyRenderedEl.innerHTML = renderMarkdown(data.body || data.raw_content);
+      docBodyRawEl.textContent = data.raw_content;
+      if (docBodyEditorEl) {
+        docBodyEditorEl.value = data.raw_content;
+      }
+      checkEditorDirty();
+
+      // Klickbare Wikilinks im gerenderten Text verdrahten
+      docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
+        linkEl.addEventListener("click", () => {
+          const target = linkEl.getAttribute("data-wikilink");
+          if (target) loadFileContent(target);
+        });
+      });
+
+      // Update Chat-Kontext-Pill
+      activeFilePill.classList.add("has-file");
+      activeFilePillText.textContent = data.name;
+      activeFilePill.title = `Aktiver Dokumenten-Fokus: ${data.path}`;
+
+      // Stelle sicher, dass die übergeordneten Ordner im Baum ausgeklappt sind
+      ensureFolderVisibleInTree(filePath);
+
+    } catch (err) {
+      alert(`Fehler beim Öffnen von ${filePath}: ${err.message}`);
+    }
+  }
+
+  function ensureFolderVisibleInTree(filePath) {
+    const parts = filePath.split("/");
+    let cur = "";
+    for (let i = 0; i < parts.length - 1; i++) {
+      cur = cur ? `${cur}/${parts[i]}` : parts[i];
+      expandedFolders.add(cur);
+    }
+    renderTree(explorerSearchInput.value);
+  }
+
+  // ==========================================
+  // 4. View Mode Umschalter, Editor & Dateioperationen (Speichern & Löschen)
+  // ==========================================
+  function checkEditorDirty() {
+    if (!docBodyEditorEl) return;
+    const isDirty = docBodyEditorEl.value !== currentFileRawContent;
+    if (editorStatusDotEl) {
+      editorStatusDotEl.classList.toggle("unsaved", isDirty);
+    }
+    if (editorStatusTextEl) {
+      editorStatusTextEl.textContent = isDirty ? "Ungespeicherte Änderungen" : "Bereit zum Bearbeiten";
+    }
+    if (btnSaveContent) {
+      btnSaveContent.classList.toggle("unsaved", isDirty);
+    }
+    if (btnSaveLabel) {
+      btnSaveLabel.textContent = isDirty ? "Speichern *" : "Speichern";
+    }
+  }
+
+  btnModeRendered.addEventListener("click", () => {
+    viewMode = "rendered";
+    btnModeRendered.classList.add("active");
+    btnModeRaw.classList.remove("active");
+    docBodyRenderedEl.style.display = "block";
+    if (docEditorContainerEl) docEditorContainerEl.style.display = "none";
+    docBodyRawEl.style.display = "none";
+
+    // Rendert eventuell im Editor geschriebene Änderungen sofort in der Vorschau
+    if (docBodyEditorEl) {
+      docBodyRenderedEl.innerHTML = renderMarkdown(docBodyEditorEl.value);
+      docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
+        linkEl.addEventListener("click", () => {
+          const target = linkEl.getAttribute("data-wikilink");
+          if (target) loadFileContent(target);
+        });
+      });
+    }
+  });
+
+  btnModeRaw.addEventListener("click", () => {
+    viewMode = "raw";
+    btnModeRaw.classList.add("active");
+    btnModeRendered.classList.remove("active");
+    docBodyRenderedEl.style.display = "none";
+    if (docEditorContainerEl) docEditorContainerEl.style.display = "flex";
+    docBodyRawEl.style.display = "none";
+    if (docBodyEditorEl) docBodyEditorEl.focus();
+  });
+
+  // Editor Eingabe- & Tab-Events
+  if (docBodyEditorEl) {
+    docBodyEditorEl.addEventListener("input", checkEditorDirty);
+    docBodyEditorEl.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const start = docBodyEditorEl.selectionStart;
+        const end = docBodyEditorEl.selectionEnd;
+        docBodyEditorEl.value = docBodyEditorEl.value.substring(0, start) + "  " + docBodyEditorEl.value.substring(end);
+        docBodyEditorEl.selectionStart = docBodyEditorEl.selectionEnd = start + 2;
+        checkEditorDirty();
+      }
+    });
+  }
+
+  // Datei speichern
+  async function saveCurrentFile() {
+    if (!currentFile || isSavingFile || !docBodyEditorEl) return;
+    isSavingFile = true;
+    if (btnSaveLabel) btnSaveLabel.textContent = "Speichert...";
+    btnSaveContent.disabled = true;
+
+    try {
+      const content = docBodyEditorEl.value;
+      const res = await fetch("/files/content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: currentFile, content: content }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      currentFileRawContent = data.file ? data.file.raw_content : content;
+      if (data.file) {
+        docDatesEl.textContent = `Zuletzt geändert: ${data.file.last_modified || "gerade eben"}`;
+        docBodyRenderedEl.innerHTML = renderMarkdown(data.file.body || content);
+        docBodyRenderedEl.querySelectorAll(".wikilink").forEach(linkEl => {
+          linkEl.addEventListener("click", () => {
+            const target = linkEl.getAttribute("data-wikilink");
+            if (target) loadFileContent(target);
+          });
+        });
+      }
+      checkEditorDirty();
+      showToast("Notiz erfolgreich gespeichert.", "success");
+    } catch (err) {
+      showToast(`Fehler beim Speichern: ${err.message}`, "error");
+    } finally {
+      isSavingFile = false;
+      btnSaveContent.disabled = false;
+      checkEditorDirty();
+    }
+  }
+
+  if (btnSaveContent) {
+    btnSaveContent.addEventListener("click", saveCurrentFile);
+  }
+
+  // Tastenkombination Cmd+S / Strg+S zum Speichern
+  window.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+      if (currentFile) {
+        e.preventDefault();
+        saveCurrentFile();
+      }
+    }
+  });
+
+  // Datei löschen (Modal & Bestätigung)
+  function openDeleteModal() {
+    if (!currentFile) return;
+    if (deleteFileNameEl) deleteFileNameEl.textContent = currentFile.split("/").pop();
+    if (deleteModal) deleteModal.classList.add("open");
+  }
+
+  function closeDeleteModal() {
+    if (deleteModal) deleteModal.classList.remove("open");
+  }
+
+  window.openDeleteModal = openDeleteModal;
+  window.closeDeleteModal = closeDeleteModal;
+
+  if (btnDeleteFile) {
+    btnDeleteFile.addEventListener("click", openDeleteModal);
+  }
+
+  if (btnCancelDelete) {
+    btnCancelDelete.addEventListener("click", closeDeleteModal);
+  }
+
+  if (btnCloseDeleteModal) {
+    btnCloseDeleteModal.addEventListener("click", closeDeleteModal);
+  }
+
+  if (btnConfirmDelete) {
+    btnConfirmDelete.addEventListener("click", async () => {
+      if (!currentFile || isDeletingFile) return;
+      isDeletingFile = true;
+      const btnConfirmText = document.getElementById("btn-confirm-delete-text");
+      if (btnConfirmText) btnConfirmText.textContent = "Löscht...";
+      btnConfirmDelete.disabled = true;
+
+      try {
+        const targetPath = currentFile;
+        const res = await fetch(`/files/content?path=${encodeURIComponent(targetPath)}`, {
+          method: "DELETE"
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `HTTP ${res.status}`);
+        }
+        closeDeleteModal();
+        showToast(`Notiz '${targetPath.split("/").pop()}' wurde gelöscht.`, "success");
+
+        currentFile = null;
+        currentFileRawContent = "";
+        currentFileAiSummary = "";
+        fileContainerEl.style.display = "none";
+        viewerControlsEl.style.display = "none";
+        emptyStateEl.style.display = "flex";
+        bcFilenameEl.textContent = "Keine Datei geöffnet";
+
+        if (activeFilePill && activeFilePillText) {
+          activeFilePill.classList.remove("has-file");
+          activeFilePillText.textContent = "Kein Fokus";
+          activeFilePill.title = "Keine Datei ausgewählt";
+        }
+        if (chatFileContextBanner) {
+          chatFileContextBanner.classList.remove("active");
+        }
+
+        await loadFileTree();
+      } catch (err) {
+        showToast(`Fehler beim Löschen: ${err.message}`, "error");
+      } finally {
+        isDeletingFile = false;
+        btnConfirmDelete.disabled = false;
+        if (btnConfirmText) btnConfirmText.textContent = "Löschen";
+      }
+    });
+  }
+
+  btnCopyContent.addEventListener("click", () => {
+    const textToCopy = docBodyEditorEl ? docBodyEditorEl.value : currentFileRawContent;
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      btnCopyContent.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+      setTimeout(() => {
+        btnCopyContent.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+      }, 1500);
+    });
+  });
+
+
+
+  // ==========================================
+  // Toast Benachrichtigungen
+  // ==========================================
+  function showToast(message, type = "success") {
+    if (!toastContainerEl) return;
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    const icon = type === "success" 
+      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`
+      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+    toast.innerHTML = `${icon}<span>${escapeHtml(message)}</span>`;
+    toastContainerEl.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(12px) scale(0.96)";
+      toast.style.transition = "all 0.25s ease";
+      setTimeout(() => toast.remove(), 260);
+    }, 3500);
+  }
+
+  // ==========================================
+  // KI-Zusammenfassung anfordern (einzelne Datei)
+  // ==========================================
+  async function requestSummary() {
+    if (!currentFile || isRequestingSummary) return;
+    isRequestingSummary = true;
+
+    if (btnRefreshSummaryCallout) {
+      btnRefreshSummaryCallout.disabled = true;
+      btnRefreshSummaryCallout.classList.add("spinning");
+    }
+
+    docAiBoxEl.style.display = "flex";
+    docAiSummaryEl.innerHTML = `<span style="color: var(--accent-light);">✨ Der Summarizer-Agent analysiert '${escapeHtml(currentFile)}' und generiert eine Zusammenfassung…</span>`;
+
+    try {
+      const res = await fetch("/files/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: currentFile }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      docAiSummaryEl.textContent = data.ai_summary || "Zusammenfassung erfolgreich erstellt.";
+      currentFileAiSummary = data.ai_summary || "";
+      if (activeFilePill) {
+        activeFilePill.title = `Aktiver Fokus: ${currentFile}\nai_map: ${currentFileAiSummary}`;
+      }
+
+      if (data.file) {
+        currentFileRawContent = data.file.raw_content;
+        docDatesEl.textContent = `Zuletzt geändert: ${data.file.last_modified || "gerade eben"}`;
+        if (viewMode === "raw") {
+          docBodyRawEl.textContent = data.file.raw_content;
+        }
+      }
+
+      // Dateibaum im Hintergrund aktualisieren (für Hover-Zusammenfassungen im Explorer)
+      loadFileTree();
+
+      showToast("✨ KI-Zusammenfassung erfolgreich generiert!");
+
+    } catch (err) {
+      docAiSummaryEl.innerHTML = `<span style="color: var(--red);">Fehler: ${escapeHtml(err.message)}</span>`;
+      showToast(`Fehler: ${err.message}`, "error");
+    } finally {
+      isRequestingSummary = false;
+      if (btnRefreshSummaryCallout) {
+        btnRefreshSummaryCallout.disabled = false;
+        btnRefreshSummaryCallout.classList.remove("spinning");
+      }
+    }
+  }
+
+  if (btnRefreshSummaryCallout) {
+    btnRefreshSummaryCallout.addEventListener("click", requestSummary);
+  }
+
+  // ==========================================
+  // 5. Explorer Suchfilter & Aktionen
+  // ==========================================
+  explorerSearchInput.addEventListener("input", (e) => {
+    renderTree(e.target.value);
+  });
+
+  btnExpandAll.addEventListener("click", () => {
+    function expandRecursive(items) {
+      for (const it of items) {
+        if (it.type === "directory") {
+          expandedFolders.add(it.path);
+          if (it.children) expandRecursive(it.children);
+        }
+      }
+    }
+    if (vaultTreeData && vaultTreeData.items) expandRecursive(vaultTreeData.items);
+    renderTree(explorerSearchInput.value);
+  });
+
+  btnCollapseAll.addEventListener("click", () => {
+    expandedFolders.clear();
+    renderTree(explorerSearchInput.value);
+  });
+
+  btnRefreshTree.addEventListener("click", () => {
+    loadFileTree();
+  });
+
+  // ==========================================
+  // 6. Pane-Umschalter (Explorer & Chat Toggle)
+  // ==========================================
+  btnToggleExplorer.addEventListener("click", () => {
+    explorerPane.classList.toggle("collapsed");
+  });
+
+  btnToggleChat.addEventListener("click", () => {
+    chatPane.classList.toggle("collapsed");
+  });
+
+  // ==========================================
+  // 7. Chat-Funktionalität
+  // ==========================================
+  function addChatMessage(role, text) {
+    const item = document.createElement("div");
+    item.className = `msg-item ${role}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "msg-bubble";
+
+    if (role === "assistant") {
+      bubble.innerHTML = renderMarkdown(text);
+      // Wikilinks in Agenten-Antworten klickbar machen
+      bubble.querySelectorAll(".wikilink").forEach(linkEl => {
+        linkEl.addEventListener("click", () => {
+          const target = linkEl.getAttribute("data-wikilink");
+          if (target) loadFileContent(target);
+        });
+      });
+    } else {
+      bubble.textContent = text;
+    }
+
+    item.appendChild(bubble);
+    messagesEl.appendChild(item);
     messagesEl.scrollTop = messagesEl.scrollHeight;
-    return el;
+    return item;
   }
 
-  function autoResize() {
-    inputEl.style.height = "auto";
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + "px";
+  function autoResizeTextarea() {
+    messageInputEl.style.height = "auto";
+    messageInputEl.style.height = Math.min(messageInputEl.scrollHeight, 140) + "px";
   }
-  inputEl.addEventListener("input", autoResize);
+  messageInputEl.addEventListener("input", autoResizeTextarea);
 
-  async function sendMessage(text) {
-    sending = true;
-    sendBtn.disabled = true;
-    const pending = addMessage("pending", "Denkt nach …");
+  async function sendChatMessage(text) {
+    isSending = true;
+    sendBtnEl.disabled = true;
+
+    // Thinking Indicator
+    const thinkingEl = document.createElement("div");
+    thinkingEl.className = "msg-item assistant";
+    thinkingEl.innerHTML = `
+      <div class="thinking-indicator">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span>Librarian recherchiert im Vault</span>
+        <div class="thinking-dots">
+          <div class="thinking-dot"></div>
+          <div class="thinking-dot"></div>
+          <div class="thinking-dot"></div>
+        </div>
+      </div>
+    `;
+    messagesEl.appendChild(thinkingEl);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
 
     try {
       const url = sessionId ? `/sessions/${sessionId}/messages` : "/sessions";
+      const payload = {
+        message: text,
+        active_file: currentFile || null,
+        active_file_summary: currentFileAiSummary || null,
+      };
+
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(payload),
       });
 
-      pending.remove();
+      thinkingEl.remove();
 
       if (res.status === 404) {
-        addMessage("error", "Diese Session existiert nicht mehr (Server neu gestartet?). Bitte neuen Chat starten.");
+        addChatMessage("error", "Diese Session ist abgelaufen. Bitte starte einen neuen Chat.");
         sessionId = null;
         return;
       }
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        addMessage("error", body.detail || `Fehler (${res.status}).`);
+        const errJson = await res.json().catch(() => ({}));
+        addChatMessage("error", errJson.detail || `Fehler (${res.status}).`);
         return;
       }
 
       const data = await res.json();
       sessionId = data.session_id;
-      addMessage("assistant", data.reply);
+      addChatMessage("assistant", data.reply);
+
+      // Dateibaum sofort nach der Antwort des Agenten aktualisieren
+      await loadFileTree();
+
+      // Falls Mutationen stattfanden: Ordner expandieren, Datei öffnen und Toast anzeigen
+      if (data.mutations && data.mutations.length > 0) {
+        for (const m of data.mutations) {
+          if (m.path && (m.tool === "create_file" || m.tool === "edit_file")) {
+            const parts = m.path.split("/");
+            if (parts.length > 1) {
+              expandedFolders.add(parts.slice(0, -1).join("/"));
+            }
+            renderTree(explorerSearchInput ? explorerSearchInput.value : "");
+            await loadFileContent(m.path);
+            showToast(`Vault: ${m.path} aktualisiert`, "success");
+          } else if (m.tool === "move_file") {
+            if (m.path) {
+              const parts = m.path.split("/");
+              if (parts.length > 1) {
+                expandedFolders.add(parts.slice(0, -1).join("/"));
+              }
+              renderTree(explorerSearchInput ? explorerSearchInput.value : "");
+              await loadFileContent(m.path);
+            }
+            showToast(`Vault: ${m.path} verschoben`, "success");
+          } else if (m.tool === "delete_file") {
+            if (currentFile === m.path) {
+              currentFile = null;
+              viewerEmptyEl.style.display = "flex";
+              viewerContentEl.style.display = "none";
+            }
+            showToast(`Vault: ${m.path} gelöscht`, "info");
+          } else if (m.tool === "create_directory") {
+            if (m.path) {
+              expandedFolders.add(m.path);
+              renderTree(explorerSearchInput ? explorerSearchInput.value : "");
+            }
+            showToast(`Ordner erstellt: ${m.path}`, "success");
+          }
+        }
+      }
+
     } catch (err) {
-      pending.remove();
-      addMessage("error", "Verbindung zum Server fehlgeschlagen: " + err.message);
+      thinkingEl.remove();
+      addChatMessage("error", `Verbindungsfehler: ${err.message}`);
     } finally {
-      sending = false;
-      sendBtn.disabled = false;
-      inputEl.focus();
+      isSending = false;
+      sendBtnEl.disabled = false;
+      messageInputEl.focus();
     }
   }
 
-  formEl.addEventListener("submit", (e) => {
+  chatFormEl.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (sending) return;
-    const text = inputEl.value.trim();
+    if (isSending) return;
+    const text = messageInputEl.value.trim();
     if (!text) return;
 
-    addMessage("user", text);
-    inputEl.value = "";
-    autoResize();
-    sendMessage(text);
+    addChatMessage("user", text);
+    messageInputEl.value = "";
+    autoResizeTextarea();
+    sendChatMessage(text);
   });
 
-  inputEl.addEventListener("keydown", (e) => {
+  messageInputEl.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      formEl.requestSubmit();
+      chatFormEl.requestSubmit();
     }
   });
 
@@ -295,11 +2705,336 @@
     }
     sessionId = null;
     messagesEl.innerHTML = "";
-    addMessage("system", "Neuer Chat gestartet.");
-    inputEl.focus();
+    addChatMessage("system", "Neuer Chat gestartet.");
+    addChatMessage("assistant", "Wie kann ich dir bei deinem Vault helfen?");
+    messageInputEl.focus();
   });
+
+  // ==========================================
+  // 8. Resizable Split Panes (Mouse Dragging)
+  // ==========================================
+  function setupResizer(resizerEl, leftPane, isReverse = false) {
+    let isDragging = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizerEl.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      startX = e.clientX;
+      startWidth = leftPane.getBoundingClientRect().width;
+      resizerEl.classList.add("dragging");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      const delta = e.clientX - startX;
+      const newWidth = isReverse ? (startWidth - delta) : (startWidth + delta);
+      if (newWidth > 200 && newWidth < 800) {
+        leftPane.style.width = `${newWidth}px`;
+      }
+    });
+
+    window.addEventListener("mouseup", () => {
+      if (isDragging) {
+        isDragging = false;
+        resizerEl.classList.remove("dragging");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    });
+  }
+
+  setupResizer(document.getElementById("resizer-1"), explorerPane);
+  setupResizer(document.getElementById("resizer-2"), chatPane, true);
+
+  // ==========================================
+  // 9. Realtime Live-Refresh via SSE (/files/events)
+  // ==========================================
+  let refreshDebounceTimer = null;
+  let fileEventSource = null;
+
+  function scheduleFileTreeRefresh(delayMs = 300, modifiedPath = null) {
+    if (refreshDebounceTimer) clearTimeout(refreshDebounceTimer);
+    refreshDebounceTimer = setTimeout(async () => {
+      await loadFileTree();
+      // Falls die aktuell im Editor geöffnete Datei geändert wurde,
+      // deren Inhalt und Zusammenfassung ebenfalls aktualisieren
+      if (modifiedPath && currentFile && modifiedPath.endsWith(currentFile)) {
+        await loadFileContent(currentFile);
+      }
+    }, delayMs);
+  }
+
+  function initFileWatcherEvents() {
+    if (!window.EventSource) {
+      console.warn("EventSource nicht unterstützt. Verwende Fallback-Polling.");
+      setInterval(() => loadFileTree(), 5000);
+      return;
+    }
+
+    try {
+      if (fileEventSource) {
+        fileEventSource.close();
+      }
+      fileEventSource = new EventSource("/files/events");
+
+      fileEventSource.addEventListener("connected", () => {
+        console.log("[Live-Sync] Echtzeit-Verbindung für Vault-Änderungen aktiv.");
+      });
+
+      const handleVaultChange = (e) => {
+        try {
+          const data = JSON.parse(e.data || "{}");
+          const changedPath = data.path || data.dest_path || data.src_path;
+          scheduleFileTreeRefresh(300, changedPath);
+        } catch (_) {
+          scheduleFileTreeRefresh(300);
+        }
+      };
+
+      fileEventSource.addEventListener("created", handleVaultChange);
+      fileEventSource.addEventListener("modified", handleVaultChange);
+      fileEventSource.addEventListener("deleted", handleVaultChange);
+      fileEventSource.addEventListener("moved", handleVaultChange);
+      fileEventSource.addEventListener("dir_created", handleVaultChange);
+      fileEventSource.addEventListener("dir_deleted", handleVaultChange);
+      fileEventSource.addEventListener("dir_moved", handleVaultChange);
+      fileEventSource.addEventListener("change", handleVaultChange);
+
+      fileEventSource.onerror = () => {
+        // EventSource unternimmt automatisch im Hintergrund Reconnects
+      };
+    } catch (err) {
+      console.error("[Live-Sync] Fehler bei EventSource:", err);
+      setInterval(() => loadFileTree(), 5000);
+    }
+  }
+
+  // ==========================================
+  // 10. Optionen & Einstellungen
+  // ==========================================
+  const SETTINGS_KEY = "obsidian_agents_ui_settings";
+  const defaultSettings = {
+    showMetadataBox: true,
+    showAiSummary: true,
+    showWikilinks: true,
+    liveSyncEnabled: true,
+    fontSize: "normal",
+  };
+
+  let currentSettings = { ...defaultSettings };
+
+  function loadSettings() {
+    try {
+      const saved = localStorage.getItem(SETTINGS_KEY);
+      if (saved) {
+        currentSettings = { ...defaultSettings, ...JSON.parse(saved) };
+      }
+    } catch (_) {}
+    applySettings();
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(currentSettings));
+    } catch (_) {}
+    applySettings();
+  }
+
+  function applySettings() {
+    // 1. Gesamter Metadaten-Block
+    if (currentSettings.showMetadataBox) {
+      document.body.classList.remove("hide-file-metadata");
+    } else {
+      document.body.classList.add("hide-file-metadata");
+    }
+
+    // 2. KI-Zusammenfassung Box
+    if (currentSettings.showAiSummary) {
+      document.body.classList.remove("hide-ai-summary");
+    } else {
+      document.body.classList.add("hide-ai-summary");
+    }
+
+    // 3. Verknüpfte Notizen Box
+    if (currentSettings.showWikilinks) {
+      document.body.classList.remove("hide-wikilinks");
+    } else {
+      document.body.classList.add("hide-wikilinks");
+    }
+
+    // 4. Lesegröße
+    document.body.classList.remove("font-compact", "font-large");
+    if (currentSettings.fontSize === "compact") {
+      document.body.classList.add("font-compact");
+    } else if (currentSettings.fontSize === "large") {
+      document.body.classList.add("font-large");
+    }
+
+    // Inputs im Modal synchronisieren
+    const cbMeta = document.getElementById("setting-show-metadata");
+    if (cbMeta) cbMeta.checked = currentSettings.showMetadataBox;
+
+    const cbAi = document.getElementById("setting-show-ai-summary");
+    if (cbAi) cbAi.checked = currentSettings.showAiSummary;
+
+    const cbWiki = document.getElementById("setting-show-wikilinks");
+    if (cbWiki) cbWiki.checked = currentSettings.showWikilinks;
+
+    const cbSync = document.getElementById("setting-live-sync");
+    if (cbSync) cbSync.checked = currentSettings.liveSyncEnabled;
+
+    document.querySelectorAll(".font-size-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.size === currentSettings.fontSize);
+    });
+  }
+
+  function openSettingsModal() {
+    applySettings();
+    const modal = document.getElementById("settings-modal");
+    if (modal) modal.classList.add("open");
+  }
+
+  function closeSettingsModal() {
+    const modal = document.getElementById("settings-modal");
+    if (modal) modal.classList.remove("open");
+  }
+
+  window.openSettingsModal = openSettingsModal;
+  window.closeSettingsModal = closeSettingsModal;
+
+  // Event Listeners für Optionen
+  const btnOpenSettings = document.getElementById("btn-open-settings");
+  const btnExplorerSettings = document.getElementById("btn-explorer-settings");
+  const btnFloatingSettings = document.getElementById("btn-floating-settings");
+  const btnCloseSettings = document.getElementById("btn-close-settings");
+  const btnSaveSettingsClose = document.getElementById("btn-save-settings-close");
+  const settingsModal = document.getElementById("settings-modal");
+
+  if (btnOpenSettings) btnOpenSettings.addEventListener("click", openSettingsModal);
+  if (btnExplorerSettings) btnExplorerSettings.addEventListener("click", openSettingsModal);
+  if (btnFloatingSettings) btnFloatingSettings.addEventListener("click", openSettingsModal);
+  if (btnCloseSettings) btnCloseSettings.addEventListener("click", closeSettingsModal);
+  if (btnSaveSettingsClose) btnSaveSettingsClose.addEventListener("click", closeSettingsModal);
+
+  // Globale Klick-Delegation für Schließen-Buttons und Backdrop
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-close-settings") || e.target.closest("#btn-save-settings-close")) {
+      closeSettingsModal();
+    } else if (e.target === document.getElementById("settings-modal")) {
+      closeSettingsModal();
+    } else if (e.target.closest("#btn-close-delete-modal") || e.target.closest("#btn-cancel-delete")) {
+      closeDeleteModal();
+    } else if (e.target === document.getElementById("delete-modal")) {
+      closeDeleteModal();
+    }
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const modal = document.getElementById("settings-modal");
+      if (modal && modal.classList.contains("open")) {
+        closeSettingsModal();
+      }
+      const delModal = document.getElementById("delete-modal");
+      if (delModal && delModal.classList.contains("open")) {
+        closeDeleteModal();
+      }
+    }
+  });
+
+
+  const cbMeta = document.getElementById("setting-show-metadata");
+  if (cbMeta) {
+    cbMeta.addEventListener("change", (e) => {
+      currentSettings.showMetadataBox = e.target.checked;
+      saveSettings();
+      showToast(e.target.checked ? "Metadaten-Block eingeblendet" : "Metadaten-Block ausgeblendet", "info");
+    });
+  }
+
+  const cbAi = document.getElementById("setting-show-ai-summary");
+  if (cbAi) {
+    cbAi.addEventListener("change", (e) => {
+      currentSettings.showAiSummary = e.target.checked;
+      saveSettings();
+    });
+  }
+
+  const cbWiki = document.getElementById("setting-show-wikilinks");
+  if (cbWiki) {
+    cbWiki.addEventListener("change", (e) => {
+      currentSettings.showWikilinks = e.target.checked;
+      saveSettings();
+    });
+  }
+
+  const cbSync = document.getElementById("setting-live-sync");
+  if (cbSync) {
+    cbSync.addEventListener("change", (e) => {
+      currentSettings.liveSyncEnabled = e.target.checked;
+      saveSettings();
+      if (e.target.checked) {
+        initFileWatcherEvents();
+      } else if (fileEventSource) {
+        fileEventSource.close();
+      }
+    });
+  }
+
+  document.querySelectorAll(".font-size-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentSettings.fontSize = btn.dataset.size;
+      saveSettings();
+    });
+  });
+
+  // ==========================================
+  // Fehlende Zusammenfassungen erstellen (Optionen-Menü)
+  // ==========================================
+  if (btnBuildMissingSummaries) {
+    btnBuildMissingSummaries.addEventListener("click", async () => {
+      btnBuildMissingSummaries.disabled = true;
+      const origText = btnBuildMissingText ? btnBuildMissingText.textContent : "Fehlende Zusammenfassungen erstellen";
+      if (btnBuildMissingText) btnBuildMissingText.textContent = "Vault wird gescannt & zusammengefasst…";
+      showToast("🚀 Scan gestartet: Fehlende Zusammenfassungen werden erstellt…", "info");
+
+      try {
+        const res = await fetch("/files/build-missing-summaries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        showToast(`✨ ${data.message}`, "success");
+        await loadFileTree();
+        if (currentFile) {
+          await loadFileContent(currentFile);
+        }
+      } catch (err) {
+        showToast(`Fehler: ${err.message}`, "error");
+      } finally {
+        btnBuildMissingSummaries.disabled = false;
+        if (btnBuildMissingText) btnBuildMissingText.textContent = origText;
+      }
+    });
+  }
+
+  // ==========================================
+  // 11. Initialisierung
+  // ==========================================
+  loadSettings();
+  loadFileTree();
+  if (currentSettings.liveSyncEnabled) {
+    initFileWatcherEvents();
+  }
+
 })();
 </script>
-
 </body>
 </html>

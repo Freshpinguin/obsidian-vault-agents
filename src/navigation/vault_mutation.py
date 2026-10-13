@@ -16,8 +16,8 @@ from pathlib import Path
 
 import yaml
 
-from src.obsidian_processor import is_summarizable_path
-from src.logging_config import logger
+from src.core.obsidian_processor import is_summarizable_path
+from src.core.logging_config import logger
 from src.navigation.vault_navigation import (
     ROOT_ALIASES,
     VaultPathError,
@@ -151,3 +151,23 @@ def move_file(path: str, new_path: str, vault_root: Path | None = None) -> str:
     source.rename(destination)
     logger.info(f"[Mutation] Datei verschoben: {source_label} -> {dest_label}")
     return f"Datei verschoben: '{source_label}' -> '{dest_label}'."
+
+
+def delete_file(path: str, vault_root: Path | None = None) -> str:
+    """Löscht eine bestehende .md-Datei im Vault."""
+    root = _vault_root(vault_root)
+    try:
+        target = _resolve(path, root, expect="file")
+    except VaultPathError as e:
+        return f"Fehler: {e}"
+
+    if not is_summarizable_path(target):
+        return f"Fehler: '{_vault_path(target, root)}' ist eine Systemdatei und kann nicht gelöscht werden."
+
+    label = _vault_path(target, root)
+    try:
+        target.unlink()
+        logger.info(f"[Mutation] Datei gelöscht: {label}")
+        return f"Datei '{label}' wurde gelöscht."
+    except Exception as e:
+        return f"Fehler beim Löschen von '{label}': {e}"

@@ -63,6 +63,7 @@ class WikiAgent(BaseModel):
     input_type: Type[BaseModel]
     response_type: Type[BaseModel]
     default_model:LLMModels =LLMModels.GEMINI_3_5_FLASH_LITE
+    temperature: float = Field(default=0.2, description="Sampling-Temperatur für LLM-Aufrufe dieses Agenten.")
     max_retries: int = Field(default=3, description="Maximale Wiederholungen bei Parse-Fehlern der finalen Antwort.")
     tools: list[WikiTool] = Field(default_factory=list, description="Werkzeuge, die der Agent per ReAct-Loop aufrufen kann.")
     max_tool_iterations: int = Field(default=15, description="Maximale Anzahl an Tool-Aufruf-Runden (ReAct-Schritten) pro Session.")
@@ -90,6 +91,18 @@ class WikiAgent(BaseModel):
             for field_name, field in self.response_type.model_fields.items()
         ]
         schema_block = "{\n" + ",\n".join(lines) + "\n}"
+        if self.tools:
+            return (
+                "## Antwortformat und Werkzeugnutzung\n"
+                "WICHTIGE REGELN:\n"
+                "1. Wenn für die Anfrage Werkzeuge erforderlich oder sinnvoll sind (z.B. Dateien lesen, suchen, erstellen, bearbeiten oder verschieben), "
+                "musst du ZUERST die entsprechenden Werkzeuge per Tool-Call aufrufen!\n"
+                "2. Behaupte NIEMALS im Text einer Antwort, dass du eine Datei angelegt, geändert oder gelesen hast, "
+                "ohne das Werkzeug dafür tatsächlich aufgerufen zu haben.\n"
+                "3. Erst wenn alle benötigten Werkzeuge ausgeführt wurden (oder bei einfachen Antworten/Smalltalk ohne Werkzeuge), "
+                "gibst du deine finale Antwort als valides JSON-Objekt nach folgendem Schema ab (ohne Markdown-Codeblock, ohne Text davor/danach):\n"
+                + schema_block
+            )
         return (
             "Antworte ausschließlich mit einem einzigen validen JSON-Objekt exakt nach folgendem Schema, "
             "ohne zusätzlichen Text, ohne Markdown-Codeblock:\n" + schema_block

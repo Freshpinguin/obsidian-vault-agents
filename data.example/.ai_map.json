@@ -1,0 +1,12 @@
+{
+  "directories": {
+    "Technologie": "Technische Grundlagen der Antriebstechnik",
+    "Kulturen": "Kultur und Gesellschaft des Beispielvolks"
+  },
+  "files": {
+    "Grundannahmen.md": "Grundlegende physikalische Regeln, Kausalität und Zeitverlauf der Welt.",
+    "Technologie/Antriebe.md": "Beschreibung der Apiden-FTL-Technik (Resonanz-Imkerantrieb) und Verweis auf [[Grundannahmen]].",
+    "Kulturen/Beispielvolk.md": "Informationen zur Kultur und Gesellschaft des Beispielvolks.",
+    "Technologie/Gasgeborene.md": "Technologische Übersicht der Gasgeborenen: Schwebetechnologien, Druckwellen-Kommunikation und Druckblasen."
+  }
+}

@@ -16,17 +16,20 @@ import unicodedata
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
 
-from src.obsidian_processor import FRONTMATTER_PATTERN, is_summarizable_path
-from src.logging_config import logger
+load_dotenv()
+
+from src.core.obsidian_processor import FRONTMATTER_PATTERN, is_summarizable_path
+from src.core.logging_config import logger
 
 PENDING_SUMMARY_TEXT = "Zusammenfassung ausstehend..."
 
-VAULT_ROOT = Path(os.getenv("WATCH_DIR", "/app/data"))
+VAULT_ROOT = Path(os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")).resolve()
 
 # Vault-Root-Bezeichner, die ein Agent einem Pfad voranstellen könnte
 # ("/app/data/Technologie", "data/Technologie", "./vault/Technologie", ...)
-ROOT_ALIASES = {"app", "data", "vault", "wiki", "obsidian"}
+ROOT_ALIASES = {"app", "data", "data.example", "vault", "wiki", "obsidian"}
 
 # Wie viele Alternativen bei mehrdeutiger Eingabe genannt werden
 MAX_SUGGESTIONS = 8

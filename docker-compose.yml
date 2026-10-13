@@ -13,7 +13,7 @@ services:
       - ${VAULT_PATH:-./data.example}:/app/data
 
       # Nur nötig, wenn der Vault selbst ein Git-Repo ist und das automatische
-      # Backup (src/backup.py) per SSH pushen soll:
+      # Backup (src/core/backup.py) per SSH pushen soll:
       # - ${HOME}/.ssh:/home/appuser/.ssh:ro
 
   # Optional: Syncthing, um den Vault zwischen mehreren Geräten zu synchronisieren.

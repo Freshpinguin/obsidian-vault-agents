@@ -2,26 +2,32 @@ import os
 import time
 import threading
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Umgebungsvariablen (.env) vor weiteren Modul-Initialisierungen laden
+load_dotenv()
+
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-# Importiere unsere Logik aus der anderen Datei
-from src.obsidian_processor import is_summarizable_path
-from src.scheduler import SummaryScheduler
-from src.backup import run_auto_backup
-from src.map_maintenance import run_ai_map_maintenance
-from src.logging_config import logger
-from src.chat_routes import router as chat_router
+# Importiere unsere Logik aus den Modulen
+from src.core.obsidian_processor import is_summarizable_path
+from src.core.scheduler import SummaryScheduler
+from src.core.backup import run_auto_backup
+from src.core.logging_config import logger
+from src.agents.map_maintenance import run_ai_map_maintenance
+from src.routes import router as api_router
 
 # Die FastAPI App initialisieren
 app = FastAPI(title="Obsidian Vault Agents")
-app.include_router(chat_router)
+app.include_router(api_router)
 
-# Der Ordner, den wir überwachen (im Docker-Container ist das /app/data)
-WATCH_DIR = os.getenv("WATCH_DIR", "/app/data")
-VAULT_ROOT = Path(WATCH_DIR)
+# Der Ordner, den wir überwachen (im Docker-Container /app/data, lokal ./data.example)
+WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
+VAULT_ROOT = Path(WATCH_DIR).resolve()
+
+from src.core.events import vault_events
 
 # Debounced: Zusammenfassungen werden erst 30min nach der letzten Änderung erzeugt
 summary_scheduler = SummaryScheduler(vault_root=VAULT_ROOT)
@@ -39,47 +45,67 @@ class MarkdownHandler(FileSystemEventHandler):
             summary_scheduler.schedule(filepath)
 
     def on_created(self, event):
-        if event.is_directory or self._is_ignored(event.src_path):
+        if self._is_ignored(event.src_path):
+            return
+        if event.is_directory:
+            vault_events.broadcast("dir_created", {"path": event.src_path})
             return
         logger.info(f"[Watchdog] Erstellt: {event.src_path}")
         self._maybe_schedule(event.src_path)
+        vault_events.broadcast("created", {"path": event.src_path})
 
     def on_modified(self, event):
-        if event.is_directory or self._is_ignored(event.src_path):
+        if self._is_ignored(event.src_path):
+            return
+        if event.is_directory:
             return
         logger.info(f"[Watchdog] Geändert: {event.src_path}")
         self._maybe_schedule(event.src_path)
+        vault_events.broadcast("modified", {"path": event.src_path})
 
     def on_deleted(self, event):
-        if event.is_directory or self._is_ignored(event.src_path):
+        if self._is_ignored(event.src_path):
+            return
+        if event.is_directory:
+            vault_events.broadcast("dir_deleted", {"path": event.src_path})
             return
         logger.info(f"[Watchdog] Gelöscht: {event.src_path}")
         summary_scheduler.cancel(Path(event.src_path))
+        vault_events.broadcast("deleted", {"path": event.src_path})
 
     def on_moved(self, event):
-        if event.is_directory or self._is_ignored(event.src_path):
+        if self._is_ignored(event.src_path):
+            return
+        if event.is_directory:
+            vault_events.broadcast("dir_moved", {"src_path": event.src_path, "dest_path": event.dest_path})
             return
         logger.info(f"[Watchdog] Verschoben: {event.src_path} -> {event.dest_path}")
         summary_scheduler.cancel(Path(event.src_path))
         self._maybe_schedule(event.dest_path)
+        vault_events.broadcast("moved", {"src_path": event.src_path, "dest_path": event.dest_path})
+
+_observer = None
 
 def run_watchdog():
     """Startet den Beobachter-Prozess."""
+    global _observer
     event_handler = MarkdownHandler()
-    observer = Observer()
-    observer.schedule(event_handler, WATCH_DIR, recursive=True)
-    observer.start()
-    logger.info(f"[Watchdog] Gestartet. Überwache: {WATCH_DIR}")
+    _observer = Observer()
+    _observer.schedule(event_handler, str(VAULT_ROOT), recursive=True)
+    _observer.start()
+    logger.info(f"[Watchdog] Gestartet. Überwache: {VAULT_ROOT}")
 
     try:
-        while True:
+        while _observer.is_alive():
             time.sleep(1)
     except Exception as e:
-        observer.stop()
         logger.error(f"[Watchdog] Beendet: {e}")
-    observer.join()
+    finally:
+        if _observer.is_alive():
+            _observer.stop()
+            _observer.join(timeout=2)
 
-# Dieser Block wird ausgeführt, sobald Docker den Server startet
+# Dieser Block wird ausgeführt, sobald der Server startet
 @app.on_event("startup")
 def startup_event():
     # Starte den Watchdog im Hintergrund (Daemon-Thread)
@@ -100,15 +126,9 @@ def startup_event():
     )
     maintenance_thread.start()
 
-# Chat-Frontend: einzelne, self-contained HTML-Datei im Repo-Root (ein Verzeichnis über src/)
-FRONTEND_PATH = Path(__file__).resolve().parent.parent / "index.html"
-
-
-@app.get("/")
-def read_root():
-    return FileResponse(FRONTEND_PATH)
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "Obsidian Vault Agents läuft."}
+@app.on_event("shutdown")
+def shutdown_event():
+    global _observer
+    if _observer and _observer.is_alive():
+        _observer.stop()
+        _observer.join(timeout=2)

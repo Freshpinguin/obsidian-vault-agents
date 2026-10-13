@@ -3,11 +3,14 @@ import frontmatter
 import os
 import json
 from datetime import datetime
+from dotenv import load_dotenv
 
-from src.logging_config import logger
+load_dotenv()
+
+from src.core.logging_config import logger
 
 # Der Hauptordner deines Wikis
-WATCH_DIR = os.getenv("WATCH_DIR", "/app/data")
+WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
 # Die Map ist jetzt auch eine unsichtbare Datei
 MAP_FILE = os.path.join(WATCH_DIR, ".ai_map.json")
 
