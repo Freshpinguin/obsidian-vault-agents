@@ -23,6 +23,11 @@ from src.routes import router as api_router
 app = FastAPI(title="Obsidian Vault Agents")
 app.include_router(api_router)
 
+from fastapi.staticfiles import StaticFiles
+
+BASE_DIR = Path(__file__).resolve().parents[1]   # Repo-Wurzel
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
 # Der Ordner, den wir überwachen (im Docker-Container /app/data, lokal ./data.example)
 WATCH_DIR = os.getenv("WATCH_DIR") or os.getenv("VAULT_PATH") or ("/app/data" if os.path.exists("/app/data") else "./data.example")
 VAULT_ROOT = Path(WATCH_DIR).resolve()
