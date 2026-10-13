@@ -2,6 +2,7 @@ import { state } from "./state.js";
 import { createNote } from "./api.js";
 import { showToast } from "./toast.js";
 import { loadFileTree } from "./tree.js";
+import { loadFileContent } from "./viewer.js";
 import {
   btnNewFile,
   createModal,
@@ -50,16 +51,29 @@ async function handleConfirmCreate() {
     parent = state.currentFile.substring(0, state.currentFile.lastIndexOf("/"));
   }
 
-  let path = parent ? `${parent}/${name}` : name;
-  if (!path.endsWith(".md")) {
-    path += ".md";
+  let cleanName = name.replace(/\\/g, "/").trim().replace(/^\/+/, "");
+  if (!cleanName || cleanName === ".md") {
+    showToast("Bitte einen gültigen Notiznamen eingeben.", "error");
+    return;
   }
+
+  // Notizen werden immer als .md Datei angelegt
+  if (cleanName.toLowerCase().endsWith(".md")) {
+    cleanName = cleanName.slice(0, -3) + ".md";
+  } else {
+    cleanName += ".md";
+  }
+
+  const path = parent ? `${parent}/${cleanName}` : cleanName;
 
   try {
     const res = await createNote(path);
     showToast(res.message);
     closeCreateModal();
     await loadFileTree();
+    if (res.path) {
+      await loadFileContent(res.path);
+    }
   } catch (err) {
     showToast(err.message, "error");
   }

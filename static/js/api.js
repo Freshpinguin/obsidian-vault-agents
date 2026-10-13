@@ -63,11 +63,14 @@ export async function buildMissingSummaries() {
   return await res.json();
 }
 
-export async function postChatMessage(payload, sessionId) {
+export async function postChatMessage(payload, sessionId, onStatus) {
   const url = sessionId ? `/sessions/${sessionId}/messages` : "/sessions";
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "text/event-stream, application/json",
+    },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -77,6 +80,51 @@ export async function postChatMessage(payload, sessionId) {
     err.detail = errJson.detail;
     throw err;
   }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("text/event-stream") && res.body) {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let finalData = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split("\n\n");
+      buffer = parts.pop(); // unvollständiger Rest
+
+      for (const block of parts) {
+        for (const line of block.split("\n")) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === "status" && typeof onStatus === "function") {
+                onStatus(event.message);
+              } else if (event.type === "done") {
+                finalData = event;
+              } else if (event.type === "error") {
+                const err = new Error(event.detail || "Fehler beim Chat-Stream");
+                err.detail = event.detail;
+                throw err;
+              }
+            } catch (jsonErr) {
+              if (jsonErr.detail) throw jsonErr;
+              console.warn("Konnte SSE Event nicht parsen:", line, jsonErr);
+            }
+          }
+        }
+      }
+    }
+
+    if (finalData) {
+      return finalData;
+    }
+    throw new Error("Stream beendet ohne finale Antwort.");
+  }
+
   return await res.json();
 }
 
@@ -98,10 +146,17 @@ export async function moveNode(path, newPath) {
 }
 
 export async function createNote(path, content = "") {
+  let notePath = (path || "").trim();
+  if (notePath.toLowerCase().endsWith(".md")) {
+    notePath = notePath.slice(0, -3) + ".md";
+  } else {
+    notePath += ".md";
+  }
+
   const res = await fetch("/files/create-file", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, content }),
+    body: JSON.stringify({ path: notePath, content }),
   });
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));

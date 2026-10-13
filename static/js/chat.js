@@ -64,7 +64,7 @@ export async function sendChatMessage(text) {
   thinkingEl.innerHTML = `
     <div class="thinking-indicator">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <span>Librarian recherchiert im Vault</span>
+      <span class="thinking-text">Chat-Assistent überlegt…</span>
       <div class="thinking-dots">
         <div class="thinking-dot"></div>
         <div class="thinking-dot"></div>
@@ -75,6 +75,14 @@ export async function sendChatMessage(text) {
   messagesEl.appendChild(thinkingEl);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
+  const thinkingTextEl = thinkingEl.querySelector(".thinking-text");
+  const onStatus = (statusMsg) => {
+    if (thinkingTextEl) {
+      thinkingTextEl.textContent = statusMsg;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  };
+
   try {
     const payload = {
       message: text,
@@ -82,7 +90,7 @@ export async function sendChatMessage(text) {
       active_file_summary: state.currentFileAiSummary || null,
     };
 
-    const data = await postChatMessage(payload, state.sessionId);
+    const data = await postChatMessage(payload, state.sessionId, onStatus);
 
     thinkingEl.remove();
 

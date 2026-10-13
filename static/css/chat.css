@@ -175,6 +175,10 @@
   width: fit-content;
 }
 
+.thinking-text {
+  transition: opacity 0.2s ease;
+}
+
 .thinking-dots {
   display: flex;
   gap: 3px;

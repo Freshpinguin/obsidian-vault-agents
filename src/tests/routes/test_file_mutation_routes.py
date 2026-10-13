@@ -114,6 +114,15 @@ def test_create_file_move_and_validation(tmp_path: Path, monkeypatch):
     assert traversal_res.status_code in (400, 404)
     assert not outside_file.exists()
 
+    # 6. Anlegen ohne .md-Endung erzeugt immer eine .md-Datei
+    no_ext_res = client.post(
+        "/files/create-file",
+        json={"path": "Projekte/KI/NotizOhneExt", "content": "# Ohne Endung"},
+    )
+    assert no_ext_res.status_code == 200, no_ext_res.text
+    assert no_ext_res.json()["path"] == "Projekte/KI/NotizOhneExt.md"
+    assert (vault_dir / "Projekte" / "KI" / "NotizOhneExt.md").is_file()
+
     traversal_move_res = client.post(
         "/files/move",
         json={"path": "Projekte/Verschoben.md", "new_path": "../escape.md"},

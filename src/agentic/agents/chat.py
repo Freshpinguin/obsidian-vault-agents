@@ -1,4 +1,5 @@
 # src/agents/chat.py
+from typing import Callable
 from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.chat_schema import ChatInput, ChatOutput
 from src.schemas.llm_models import LLMModels
@@ -188,6 +189,7 @@ def start_wiki_chat(
     model_override: LLMModels | None = None,
     active_file: str | None = None,
     active_file_summary: str | None = None,
+    on_status: Callable[[str], None] | None = None,
 ) -> AgentSession:
     """Startet eine neue Chat-Session mit der ersten Nachricht der Person. Lädt die
     aktuelle ai_map und gibt sie dem Agenten von Anfang an als System-Kontext mit.
@@ -197,7 +199,9 @@ def start_wiki_chat(
     full_message = format_message_with_active_file(
         message, active_file=active_file, active_file_summary=active_file_summary
     )
-    return start_chat_session(ChatAgent, full_message, model_override=model_override, context=ai_map_context)
+    return start_chat_session(
+        ChatAgent, full_message, model_override=model_override, context=ai_map_context, on_status=on_status
+    )
 
 
 def continue_wiki_chat(
@@ -206,6 +210,7 @@ def continue_wiki_chat(
     model_override: LLMModels | None = None,
     active_file: str | None = None,
     active_file_summary: str | None = None,
+    on_status: Callable[[str], None] | None = None,
 ) -> AgentSession:
     """Führt eine bestehende Chat-Session mit einer weiteren Nachricht fort. Falls eine Datei
     im Frontend geöffnet ist, wird der Pfad und die kurze ai_map-Zusammenfassung der Nachricht
@@ -213,4 +218,4 @@ def continue_wiki_chat(
     full_message = format_message_with_active_file(
         message, active_file=active_file, active_file_summary=active_file_summary
     )
-    return continue_chat_session(session, full_message, model_override=model_override)
+    return continue_chat_session(session, full_message, model_override=model_override, on_status=on_status)

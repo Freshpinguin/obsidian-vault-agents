@@ -154,7 +154,8 @@ export function buildTreeDOM(items, filter = "") {
         const row = document.createElement("div");
         row.className = `node-row ${state.currentFile === item.path ? "active" : ""}`;
         row.dataset.path = item.path;
-        row.title = item.ai_summary || item.name;
+        const displayName = item.name.replace(/\.md$/i, "");
+        row.title = item.ai_summary || displayName;
 
         // Drag & Drop auf Datei-Zeile
         row.draggable = true;
@@ -172,7 +173,7 @@ export function buildTreeDOM(items, filter = "") {
           <span class="node-icon file">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           </span>
-          <span class="node-label">${escapeHtml(item.name)}</span>
+          <span class="node-label">${escapeHtml(displayName)}</span>
         `;
 
         row.addEventListener("click", () => {
@@ -205,8 +206,9 @@ export function renderQuickCards(treeData) {
   sampleFiles.slice(0, 4).forEach(file => {
     const card = document.createElement("div");
     card.className = "quick-card";
+    const displayName = file.name.replace(/\.md$/i, "");
     card.innerHTML = `
-      <div class="quick-card-title">📝 ${escapeHtml(file.name)}</div>
+      <div class="quick-card-title">📝 ${escapeHtml(displayName)}</div>
       <div class="quick-card-desc">${escapeHtml(file.ai_summary || "Klicke zum Öffnen")}</div>
     `;
     card.addEventListener("click", () => loadFileContent(file.path));

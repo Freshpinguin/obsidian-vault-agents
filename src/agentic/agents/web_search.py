@@ -11,7 +11,12 @@ from google.genai import types
 
 from src.core.logging_config import logger
 
-MODEL = "gemini-2.5-flash"  # unterstützt Search Grounding im Free Tier
+AGENT = "antigravity-preview-09-2026"
+MODEL = "gemini-3.5-flash-lite"
+AGENT_CONFIG = {
+    "type": "antigravity",
+    "model": MODEL,
+}
 
 SYSTEM_INSTRUCTION = """Du bist der Websuche-Agent eines persönlichen Science-Fiction-Weltenbau-Wikis.
 
@@ -61,7 +66,7 @@ def _extract_sources(response) -> list[str]:
 
 
 def web_search(query: str) -> str:
-    """Beantwortet eine einzelne Anfrage per Google-Search-Grounding (Realismus-Check
+    """Beantwortet eine einzelne Anfrage per Google Interactions API (Realismus-Check
     eines Konzepts ODER allgemeine Wissensfrage) und gibt die gefundenen Details (inkl.
     Quellen) als Text zurück. Gibt bei Fehlern einen les- und nutzbaren Fehlertext statt
     einer Exception zurück, damit ein aufrufender Agent das Ergebnis direkt als
@@ -69,26 +74,28 @@ def web_search(query: str) -> str:
     prompt = f"{SYSTEM_INSTRUCTION}\n\nAnfrage:\n{query}"
 
     try:
-        response = _get_client().models.generate_content(
-            model=MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-                temperature=1.0,  # empfohlener Wert für Search Grounding
-            ),
+        interaction = _get_client().interactions.create(
+            agent=AGENT,
+            input=prompt,
+            environment="remote",
+            agent_config=AGENT_CONFIG,
         )
     except Exception as e:
-        logger.error(f"[WebSearch] Gemini-Aufruf fehlgeschlagen: {e}")
+        logger.error(f"[WebSearch] Interactions-Aufruf fehlgeschlagen: {e}")
         return f"Fehler: Die Websuche konnte nicht durchgeführt werden ({e})."
 
-    text = (getattr(response, "text", None) or "").strip()
+    text = (
+        getattr(interaction, "output_text", None)
+        or getattr(interaction, "text", None)
+        or ""
+    ).strip()
     if not text:
-        logger.warning("[WebSearch] Leere Antwort von Gemini erhalten.")
+        logger.warning("[WebSearch] Leere Antwort von Interactions erhalten.")
         return "Fehler: Die Websuche lieferte keine Antwort."
 
-    sources = _extract_sources(response)
+    sources = _extract_sources(interaction)
     if sources:
         text += "\n\nQuellen:\n" + "\n".join(f"- {s}" for s in sources)
 
-    logger.info(f"[WebSearch] Anfrage bearbeitet ({len(sources)} Quellen gefunden).")
+    logger.info(f"[WebSearch] Anfrage bearbeitet.")
     return text

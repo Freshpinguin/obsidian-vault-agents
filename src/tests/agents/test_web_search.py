@@ -23,10 +23,11 @@ def test_web_search_arguments_and_sources_attached(fake_genai):
     assert "ESA Propulsion (https://esa.int/warp)" in res
 
     call = fake_genai.calls[0]
-    assert call["model"] == MODEL
+    assert call["agent"] == web_search_mod.AGENT
+    assert call["environment"] == "remote"
+    assert call["agent_config"]["model"] == MODEL
     assert SYSTEM_INSTRUCTION in call["contents"]
     assert "Ist Warp realistisch?" in call["contents"]
-    assert call["config"].temperature == 1.0
 
 
 def test_web_search_deduplicates_sources():

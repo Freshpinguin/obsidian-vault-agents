@@ -170,3 +170,76 @@ def test_file_routes_endpoints(vault: Path, fake_llm: FakeLLM, api_client: TestC
     resp_summary = api_client.post("/files/summary", json={"path": "Grundannahmen.md"})
     assert resp_summary.status_code == 200
     assert resp_summary.json()["success"] is True
+
+
+def test_route_create_session_stream(vault: Path, fake_llm: FakeLLM, api_client: TestClient):
+    import json
+    fake_llm.script(
+        "Chat",
+        tool_calls(("create_file", {"path": "Kulturen/Stream.md", "content": "Stream Inhalt"})),
+        final({"reply": "Datei Kulturen/Stream.md erstellt."}),
+    )
+
+    resp = api_client.post(
+        "/sessions",
+        json={"message": "Erstelle Kulturen/Stream.md"},
+        headers={"Accept": "text/event-stream"},
+    )
+    assert resp.status_code == 201
+    assert "text/event-stream" in resp.headers["content-type"]
+
+    events = []
+    for line in resp.text.split("\n"):
+        if line.startswith("data: "):
+            events.append(json.loads(line[6:]))
+
+    status_events = [e for e in events if e.get("type") == "status"]
+    done_events = [e for e in events if e.get("type") == "done"]
+
+    assert len(status_events) >= 1
+    assert any("Erstellt Datei" in e["message"] for e in status_events)
+    assert len(done_events) == 1
+    assert done_events[0]["reply"] == "Datei Kulturen/Stream.md erstellt."
+    assert len(done_events[0]["mutations"]) == 1
+    assert done_events[0]["mutations"][0]["tool"] == "create_file"
+
+
+def test_route_message_stream(vault: Path, fake_llm: FakeLLM, api_client: TestClient):
+    import json
+    fake_llm.script(
+        "Chat",
+        final({"reply": "Hallo!"}),
+    )
+
+    resp1 = api_client.post("/sessions", json={"message": "Hi"})
+    assert resp1.status_code == 201
+    session_id = resp1.json()["session_id"]
+
+    fake_llm.script(
+        "Chat",
+        tool_calls(("edit_file", {"path": "Grundannahmen.md", "content": "Neu"})),
+        final({"reply": "Geändert"}),
+    )
+
+    resp2 = api_client.post(
+        f"/sessions/{session_id}/messages",
+        json={"message": "Ändere Grundannahmen"},
+        headers={"Accept": "text/event-stream"},
+    )
+    assert resp2.status_code == 200
+    assert "text/event-stream" in resp2.headers["content-type"]
+
+    events = []
+    for line in resp2.text.split("\n"):
+        if line.startswith("data: "):
+            events.append(json.loads(line[6:]))
+
+    status_events = [e for e in events if e.get("type") == "status"]
+    done_events = [e for e in events if e.get("type") == "done"]
+
+    assert len(status_events) >= 1
+    assert any("Bearbeitet Datei" in e["message"] for e in status_events)
+    assert len(done_events) == 1
+    assert done_events[0]["reply"] == "Geändert"
+    assert len(done_events[0]["mutations"]) == 1
+    assert done_events[0]["mutations"][0]["tool"] == "edit_file"

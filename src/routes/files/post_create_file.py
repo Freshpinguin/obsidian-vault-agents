@@ -18,8 +18,12 @@ def post_create_file(body: CreateNoteRequest):
     """Erstellt eine neue Notizdatei (.md) im Vault."""
     root = _vault_root().resolve()
 
+    raw_path = (body.path or "").strip()
+    if raw_path and not raw_path.lower().endswith(".md"):
+        raw_path += ".md"
+
     try:
-        target = _resolve_new_path(body.path, root)
+        target = _resolve_new_path(raw_path, root)
     except VaultPathError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

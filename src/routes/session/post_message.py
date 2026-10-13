@@ -1,14 +1,30 @@
+from fastapi import Request
 from src.agentic import continue_wiki_chat
 from src.schemas.session_schema import ChatMessageRequest, ChatReplyResponse
 from src.routes.session import router
-from src.routes.session.storage import _sessions, _sessions_lock, get_session, reply_or_502
+from src.routes.session.storage import _sessions, _sessions_lock, get_session, reply_or_502, stream_chat_session
 
 
 @router.post("/{session_id}/messages", response_model=ChatReplyResponse)
-def post_message(session_id: str, body: ChatMessageRequest):
+def post_message(session_id: str, body: ChatMessageRequest, request: Request):
     """Schickt eine weitere Nachricht an eine bestehende Chat-Session (per session_id aus start_session)."""
     session = get_session(session_id)
     prev_len = len(session.history)
+
+    if "text/event-stream" in request.headers.get("accept", ""):
+        return stream_chat_session(
+            lambda on_status: continue_wiki_chat(
+                session,
+                body.message,
+                active_file=body.active_file,
+                active_file_summary=body.active_file_summary,
+                on_status=on_status,
+            ),
+            since_index=prev_len,
+            existing_session_id=session_id,
+            status_code=200,
+        )
+
     session = continue_wiki_chat(
         session,
         body.message,

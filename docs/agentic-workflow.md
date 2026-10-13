@@ -179,7 +179,7 @@ rest of the app imports.
 | **Summarizer** | Gemma 31B | — | n/a | no | no | `SummarizerInput` → `SummarizerOutput` |
 | **FolderSummarizer** | Gemma 31B | — | n/a | no | no | `FolderSummarizerInput` → `FolderSummarizerOutput` |
 | `run_reasoning` | gemini-3.6-flash, thinking HIGH | — (SDK, tools disabled) | n/a | — | — | `(task, file_paths)` → `str` |
-| `web_search` | gemini-2.5-flash + Search Grounding | — | n/a | — | — | `(query)` → `str` |
+| `web_search` | antigravity-preview-09-2026 (gemini-3.5-flash-lite) + Search Grounding | — | n/a | — | — | `(query)` → `str` |
 
 **Chat** ([chat.py](../src/agentic/agents/chat.py)) is the only agent a user talks to.
 `start_wiki_chat` / `continue_wiki_chat` wrap the engine with two pieces of context injection:

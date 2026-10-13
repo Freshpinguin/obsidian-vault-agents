@@ -1,7 +1,11 @@
 # src/routes/session/storage.py
+import json
+import queue
 import threading
+from typing import Callable
 
 from fastapi import HTTPException
+from fastapi.responses import StreamingResponse
 
 from src.schemas.agent_schema import AgentSession
 from src.schemas.session_schema import ChatReplyResponse
@@ -21,12 +25,7 @@ def get_session(session_id: str) -> AgentSession:
     return session
 
 
-def reply_or_502(session: AgentSession, since_index: int = 0) -> ChatReplyResponse:
-    if not session.is_successful:
-        logger.error(f"[ChatAPI] Session {session.session_id} lieferte keine valide Antwort.")
-        raise HTTPException(status_code=502, detail="Der Chat-Agent konnte keine Antwort erzeugen.")
-
-    # Mutationen ermitteln, die in diesem Turn ausgeführt wurden
+def extract_mutations(session: AgentSession, since_index: int = 0) -> list[dict]:
     mutations = []
     mutation_tools = {"create_file", "edit_file", "move_file", "create_directory", "delete_file"}
     for call in session.history[since_index:]:
@@ -38,9 +37,72 @@ def reply_or_502(session: AgentSession, since_index: int = 0) -> ChatReplyRespon
                         "path": tc.arguments.get("path") or tc.arguments.get("new_path"),
                         "result": tc.result,
                     })
+    return mutations
+
+
+def reply_or_502(session: AgentSession, since_index: int = 0) -> ChatReplyResponse:
+    if not session.is_successful:
+        logger.error(f"[ChatAPI] Session {session.session_id} lieferte keine valide Antwort.")
+        raise HTTPException(status_code=502, detail="Der Chat-Agent konnte keine Antwort erzeugen.")
 
     return ChatReplyResponse(
         session_id=session.session_id,
         reply=session.final_result.reply,
-        mutations=mutations,
+        mutations=extract_mutations(session, since_index=since_index),
+    )
+
+
+def stream_chat_session(
+    run_func: Callable[[Callable[[str], None]], AgentSession],
+    since_index: int = 0,
+    existing_session_id: str | None = None,
+    status_code: int = 200,
+) -> StreamingResponse:
+    q: queue.Queue = queue.Queue()
+
+    def status_callback(msg: str) -> None:
+        q.put({"type": "status", "message": msg})
+
+    def worker() -> None:
+        try:
+            session = run_func(status_callback)
+            if not session.is_successful:
+                q.put({"type": "error", "detail": "Der Chat-Agent konnte keine Antwort erzeugen."})
+                return
+
+            sess_id = existing_session_id or session.session_id
+            with _sessions_lock:
+                _sessions[sess_id] = session
+
+            mutations = extract_mutations(session, since_index=since_index)
+            q.put({
+                "type": "done",
+                "session_id": sess_id,
+                "reply": session.final_result.reply,
+                "mutations": mutations,
+            })
+        except Exception as e:
+            logger.error(f"[ChatAPI] Fehler beim Streamen: {e}", exc_info=True)
+            q.put({"type": "error", "detail": str(e)})
+        finally:
+            q.put(None)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def event_generator():
+        while True:
+            event = q.get()
+            if event is None:
+                break
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        status_code=status_code,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
