@@ -1,7 +1,10 @@
 # src/agentic/tools/tasks.py
 """WikiTool-Instanzen für Hintergrund-Aufgaben und Planungs-Management."""
-from src.schemas.chat_schema import CheckTaskStatusArgs, StartBackgroundTaskArgs
-from src.schemas.task_agent_schema import UpdatePlanArgs
+from src.schemas.tool_args import (
+    CheckTaskStatusArgs,
+    StartBackgroundTaskArgs,
+    UpdatePlanArgs,
+)
 from src.schemas.tool_schema import WikiTool
 from src.agentic.engine.jobs import (
     check_task_status,

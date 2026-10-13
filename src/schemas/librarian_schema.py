@@ -1,6 +1,8 @@
 # src/schemas/librarian_schema.py
 from pydantic import BaseModel, Field
 
+from src.schemas.tool_args import PathsArgs
+
 
 class LibrarianInput(BaseModel):
     question: str = Field(description="Die Frage, die anhand des Vault-Inhalts beantwortet werden soll.")
@@ -12,8 +14,8 @@ class LibrarianOutput(BaseModel):
     sources: list[str] = Field(default_factory=list, description="Vault-Pfade der Dateien, auf denen die Antwort beruht.")
 
 
-class PathsArgs(BaseModel):
-    paths: list[str] = Field(
-        description="Liste von Vault-Pfaden (Ordner oder Dateien). Immer alle relevanten Pfade auf einmal übergeben, "
-                     "statt mehrere einzelne Aufrufe nacheinander zu machen."
-    )
+__all__ = [
+    "LibrarianInput",
+    "LibrarianOutput",
+    "PathsArgs",
+]

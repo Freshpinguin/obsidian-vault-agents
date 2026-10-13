@@ -1,9 +1,11 @@
 # src/agentic/tools/delegation.py
 """WikiTool-Instanzen, die andere Agenten oder spezialisierte Subsysteme aufrufen."""
-from src.schemas.chat_schema import AskLibrarianArgs
-from src.schemas.reasoner_schema import ReasoningArgs
+from src.schemas.tool_args import (
+    AskLibrarianArgs,
+    ReasoningArgs,
+    WebSearchArgs,
+)
 from src.schemas.tool_schema import WikiTool
-from src.schemas.web_search_schema import WebSearchArgs
 from src.agentic.agents.reasoner import run_reasoning
 from src.agentic.agents.web_search import web_search
 from src.navigation import load_files

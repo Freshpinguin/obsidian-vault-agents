@@ -1,6 +1,6 @@
 # src/agentic/tools/vault_write.py
 """WikiTool-Instanzen für schreibende Operationen im Vault."""
-from src.schemas.chat_schema import (
+from src.schemas.tool_args import (
     CreateDirectoryArgs,
     CreateFileArgs,
     EditFileArgs,

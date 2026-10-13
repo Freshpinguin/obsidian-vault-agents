@@ -1,6 +1,6 @@
 # src/agentic/tools/vault_read.py
 """WikiTool-Instanzen für lesende Operationen im Vault."""
-from src.schemas.librarian_schema import PathsArgs
+from src.schemas.tool_args import PathsArgs
 from src.schemas.tool_schema import WikiTool
 from src.navigation import (
     load_directory_summaries,
