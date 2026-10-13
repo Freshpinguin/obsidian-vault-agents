@@ -47,6 +47,17 @@ Obsidian-Vault ──> watchdog ──> Scheduler (debounced) ──> Summarizer
                        └── start_background_task ──> Task-Agent (eigener Thread)
 ```
 
+### Paketstruktur (`src/`)
+
+- `src/agentic/` — Kapselt die gesamte KI- und Agenten-Schicht hinter einer schlanken Fassade (`src/agentic/__init__.py`):
+  - `agents/`: Roster aller Agenten (`ChatAgent`, `TaskAgent`, `LibrarianAgent`, `Summarizer`, `FolderSummarizer`, `reasoner`, `web_search`)
+  - `engine/`: ReAct-Ausführungsschleife (`runner.py`), Kontext-Kompaktierung (`compaction.py`), Job-Registry (`jobs.py`), Absicherungen (`guards.py`), Response-Parsing (`response.py`), Sitzungslogs (`session_log.py`) und Modell-Rotation (`model_rotation.py`)
+  - `tools/`: Modulare Werkzeugdefinitionen (`vault_read.py`, `vault_write.py`, `delegation.py`, `tasks.py`)
+- `src/core/` — Vault-Verwaltung, Watchdog, Scheduler, Kartenpflege (`map_maintenance.py`), Rebuild
+- `src/navigation/` — Dateisystem- und YAML-Zugriff auf den Obsidian-Vault
+- `src/routes/` — FastAPI HTTP-Endpunkte für Chat-Sessions und Datei-Operationen
+- `src/schemas/` — Pydantic-Datenmodelle und Werkzeug-Argumente
+
 ### Agenten
 
 | Agent | Aufgabe |
