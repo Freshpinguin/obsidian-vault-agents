@@ -1,3 +1,13 @@
+---
+ai_summary: Die Gasgeborenen (Die Ätherischen) sind gasförmige, selbstorganisierte
+  Entitäten in den Atmosphärenschichten von Gasriesen. Ihre Struktur basiert auf chemischen
+  Gradienten, ionisiertem Helium, Edelgasen und organischen Aerosolen. Kommunikation
+  erfolgt über Pheromon-Gasmarkierungen und elektrostatische Spannungen. Durch Verschmelzung
+  zu Schwarmintelligenzen entstehen temporäre, hochentwickelte Kollektivintelligenzen.
+content_hash: 66da2e22c91a3be779560aac62d75f3b
+linked_files: []
+last_modified: '2026-10-13 13:46:06'
+---
 # Gasgeborene (Die Ätherischen)
 
 ## Biologie & Konstitution

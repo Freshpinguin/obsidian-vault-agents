@@ -1,12 +1,18 @@
 {
   "directories": {
     "Technologie": "Technische Grundlagen der Antriebstechnik",
-    "Kulturen": "Kultur und Gesellschaft des Beispielvolks"
+    "Kulturen": "Biologie und Kultur außerirdischer Völker"
   },
   "files": {
     "Grundannahmen.md": "Grundlegende physikalische Regeln, Kausalität und Zeitverlauf der Welt.",
     "Technologie/Antriebe.md": "Beschreibung der Apiden-FTL-Technik (Resonanz-Imkerantrieb) und Verweis auf [[Grundannahmen]].",
+    "Technologie/Gasgeborene.md": "Technologische Übersicht der Gasgeborenen: Schwebetechnologien, Druckwellen-Kommunikation und Druckblasen.",
+    "Kulturen/Apiden.md": "Biologie, Kommunikation und Kultur des Insektenoidvolkes der Apiden.",
+    "Kulturen/Gasgeborene.md": "Biologie, Kommunikation und Schwarmintelligenz der gasförmigen Entitäten 'Die Ätherischen'.",
+    "Kulturen/Antipiden.md": "Leeres Dokument ohne Inhalt.",
+    "Kulturen/Leonide.md": "Zusammenfassung ausstehend...",
+    "Kulturen/Xylanthi.md": "Zusammenfassung ausstehend...",
     "Kulturen/Beispielvolk.md": "Informationen zur Kultur und Gesellschaft des Beispielvolks.",
-    "Technologie/Gasgeborene.md": "Technologische Übersicht der Gasgeborenen: Schwebetechnologien, Druckwellen-Kommunikation und Druckblasen."
+    "Technologie/Gewachsenerechner.md": "Zusammenfassung ausstehend..."
   }
 }
