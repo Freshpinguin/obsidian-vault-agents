@@ -83,3 +83,29 @@ export async function postChatMessage(payload, sessionId) {
 export async function deleteSession(sessionId) {
   return fetch(`/sessions/${sessionId}`, { method: "DELETE" }).catch(() => {});
 }
+
+export async function moveNode(path, newPath) {
+  const res = await fetch("/files/move", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, new_path: newPath }),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}
+
+export async function createNote(path, content = "") {
+  const res = await fetch("/files/create-file", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, content }),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.detail || `HTTP ${res.status}`);
+  }
+  return await res.json();
+}

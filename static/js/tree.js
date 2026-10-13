@@ -1,5 +1,6 @@
 import { state } from "./state.js";
-import { fetchFileTree } from "./api.js";
+import { fetchFileTree, moveNode } from "./api.js";
+import { showToast } from "./toast.js";
 import { escapeHtml } from "./markdown.js";
 import {
   fileTreeEl,
@@ -88,6 +89,43 @@ export function buildTreeDOM(items, filter = "") {
           <span class="node-count">${(item.children || []).length}</span>
         `;
 
+        // Drag & Drop auf Ordner-Element (gesamter Teilbaum)
+        folderNode.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "move";
+          row.classList.add("drop-target");
+        });
+
+        folderNode.addEventListener("dragleave", (e) => {
+          if (!folderNode.contains(e.relatedTarget)) {
+            row.classList.remove("drop-target");
+          }
+        });
+
+        folderNode.addEventListener("drop", async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          row.classList.remove("drop-target");
+
+          const sourcePath = e.dataTransfer.getData("text/plain");
+          if (!sourcePath) return;
+
+          const base = sourcePath.split("/").pop();
+          const newPath = item.path + "/" + base;
+
+          if (newPath === sourcePath) return;
+
+          try {
+            const res = await moveNode(sourcePath, newPath);
+            showToast(res.message);
+            state.expandedFolders.add(item.path);
+            await loadFileTree();
+          } catch (err) {
+            showToast(err.message, "error");
+          }
+        });
+
         row.addEventListener("click", (e) => {
           e.stopPropagation();
           if (state.expandedFolders.has(item.path)) {
@@ -117,6 +155,17 @@ export function buildTreeDOM(items, filter = "") {
         row.className = `node-row ${state.currentFile === item.path ? "active" : ""}`;
         row.dataset.path = item.path;
         row.title = item.ai_summary || item.name;
+
+        // Drag & Drop auf Datei-Zeile
+        row.draggable = true;
+        row.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/plain", item.path);
+          e.dataTransfer.effectAllowed = "move";
+          row.classList.add("dragging");
+        });
+        row.addEventListener("dragend", () => {
+          row.classList.remove("dragging");
+        });
 
         row.innerHTML = `
           <span style="width: 14px;"></span>
@@ -209,5 +258,32 @@ if (btnCollapseAll) {
 if (btnRefreshTree) {
   btnRefreshTree.addEventListener("click", () => {
     loadFileTree();
+  });
+}
+
+// Vault-Root als Drop-Ziel für fileTreeEl
+if (fileTreeEl) {
+  fileTreeEl.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  });
+
+  fileTreeEl.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    const sourcePath = e.dataTransfer.getData("text/plain");
+    if (!sourcePath) return;
+
+    const base = sourcePath.split("/").pop();
+    const newPath = base;
+
+    if (newPath === sourcePath) return;
+
+    try {
+      const res = await moveNode(sourcePath, newPath);
+      showToast(res.message);
+      await loadFileTree();
+    } catch (err) {
+      showToast(err.message, "error");
+    }
   });
 }

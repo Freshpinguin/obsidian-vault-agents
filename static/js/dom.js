@@ -61,3 +61,12 @@ export const btnRefreshSummaryCallout = document.getElementById("btn-refresh-sum
 export const btnBuildMissingSummaries = document.getElementById("btn-build-missing-summaries");
 export const btnBuildMissingText = document.getElementById("btn-build-missing-text");
 export const toastContainerEl = document.getElementById("toast-container");
+
+// Datei- und Ordner-Erstellung (Explorer)
+export const btnNewFile = document.getElementById("btn-new-file");
+export const createModal = document.getElementById("create-modal");
+export const createModalTitle = document.getElementById("create-modal-title");
+export const createNameInput = document.getElementById("create-name-input");
+export const btnConfirmCreate = document.getElementById("btn-confirm-create");
+export const btnCancelCreate = document.getElementById("btn-cancel-create");
+export const btnCloseCreateModal = document.getElementById("btn-close-create-modal");

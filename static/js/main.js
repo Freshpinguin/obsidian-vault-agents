@@ -5,6 +5,7 @@ import "./panes.js";
 import "./editor.js";
 import "./chat.js";
 import "./summaries.js";
+import "./explorer-actions.js";
 
 // ==========================================
 // 11. Initialisierung
