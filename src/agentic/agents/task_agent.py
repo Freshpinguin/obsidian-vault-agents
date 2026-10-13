@@ -11,11 +11,6 @@ Chat-Agent, der ihn als Tool aufruft, nicht blockiert. Der Fortschritt (Plan + S
 wird in der Job-Registry dieses Moduls gehalten, damit check_task_status ihn abfragen
 kann, ohne selbst eine LLM-Session anzustoßen.
 """
-import itertools
-import threading
-import uuid
-from dataclasses import dataclass, field
-from datetime import datetime
 
 from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.llm_models import LLMModels
@@ -98,19 +93,6 @@ Reflex auf die erste Anfrage – rufe kein Werkzeug mehr auf und antworte direkt
 """
 
 
-from src.agentic.engine.model_rotation import TASK_MODELS, task_rotation
-
-# Free-Tier-APIs begrenzen Tokens/Minute PRO Modell, und der Task-Agent kann durch
-# seine vielen ReAct-Runden schnell in dieses Limit laufen. Abwechselnd zwischen zwei
-# Modellen zu wechseln verteilt die Last auf zwei getrennte Kontingente.
-_MODEL_ROTATION = TASK_MODELS
-_rotation = task_rotation
-
-
-def _next_rotation_model() -> LLMModels:
-    if hasattr(_rotation, "next"):
-        return _rotation.next()
-    return next(_rotation)
 
 
 def build_task_input(task_id: str, description: str) -> TaskAgentInput:

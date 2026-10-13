@@ -8,8 +8,8 @@ from src.agentic.agents.task_agent import (
     check_task_status,
     start_background_task,
     _jobs,
-    _MODEL_ROTATION,
 )
+from src.agentic.engine.model_rotation import TASK_MODELS as _MODEL_ROTATION
 from src.schemas.llm_models import LLMModels
 from src.agentic.tools import CONTENT_TOOLS
 from src.tests.fakes.fake_llm import FakeLLM, final, raw, tool_calls

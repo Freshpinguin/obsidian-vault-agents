@@ -4,8 +4,8 @@ import pytest
 from src.agentic.agents.librarian import (
     LibrarianAgent,
     ask_librarian,
-    _MODEL_ROTATION,
 )
+from src.agentic.engine.model_rotation import LIBRARIAN_MODELS as _MODEL_ROTATION
 from src.schemas.librarian_schema import LibrarianOutput
 from src.tests.fakes.fake_llm import FakeLLM, final, tool_calls
 

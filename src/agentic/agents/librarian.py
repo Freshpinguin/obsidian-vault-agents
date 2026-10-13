@@ -1,7 +1,4 @@
 # src/agents/librarian.py
-import itertools
-import threading
-from typing import Any
 
 from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.librarian_schema import LibrarianInput, LibrarianOutput
@@ -75,19 +72,7 @@ LibrarianAgent = WikiAgent(
 )
 
 
-from src.agentic.engine.model_rotation import LIBRARIAN_MODELS, librarian_rotation
-
-# Free-Tier-APIs begrenzen Tokens/Minute PRO Modell. Ein einzelnes Modell (31B) läuft bei
-# reger Nutzung schnell in dieses Limit; abwechselnd 31B/26B zu verwenden verteilt die Last
-# auf zwei getrennte Kontingente.
-_MODEL_ROTATION = LIBRARIAN_MODELS
-_rotation = librarian_rotation
-
-
-def _next_rotation_model() -> LLMModels:
-    if hasattr(_rotation, "next"):
-        return _rotation.next()
-    return next(_rotation)
+from src.agentic.engine.model_rotation import librarian_rotation
 
 
 def ask_librarian(question: str, model_override: LLMModels | None = None) -> AgentSession:
@@ -96,5 +81,5 @@ def ask_librarian(question: str, model_override: LLMModels | None = None) -> Age
     explizites model_override wechselt jeder Aufruf abwechselnd zwischen GEMMA_31B und
     GEMMA_26B, um das Tokens/Minute-Limit der Free-Tier-API auf zwei Modelle zu verteilen."""
     input_data = LibrarianInput(question=question, ai_map=format_ai_map(load_ai_map()))
-    use_model = model_override or _next_rotation_model()
+    use_model = model_override or librarian_rotation.next()
     return run_agent_session(agent=LibrarianAgent, raw_input=input_data, model_override=use_model)

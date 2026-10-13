@@ -4,8 +4,12 @@ from pathlib import Path
 import pytest
 
 from src.agentic.agents.chat import ChatAgent, start_wiki_chat
-from src.agentic.agents.task_agent import TaskAgent, start_background_task, _jobs, _MODEL_ROTATION as TASK_ROTATION
-from src.agentic.agents.librarian import LibrarianAgent, ask_librarian, _MODEL_ROTATION as LIBRARIAN_ROTATION
+from src.agentic.agents.task_agent import TaskAgent, start_background_task, _jobs
+from src.agentic.agents.librarian import LibrarianAgent, ask_librarian
+from src.agentic.engine.model_rotation import (
+    LIBRARIAN_MODELS as LIBRARIAN_ROTATION,
+    TASK_MODELS as TASK_ROTATION,
+)
 from src.agentic.agents.summarizer import SummarizerAgent
 from src.agentic.agents.folder_summarizer import FolderSummarizerAgent
 from src.agentic.engine.compaction import maybe_compact, context_size_chars

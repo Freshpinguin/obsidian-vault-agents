@@ -147,8 +147,6 @@ def _reset_global_state(monkeypatch):
     storage._sessions.clear()
     librarian_rotation.reset()
     task_rotation.reset()
-    monkeypatch.setattr(librarian, "_rotation", itertools.cycle(librarian._MODEL_ROTATION))
-    monkeypatch.setattr(task_agent, "_rotation", itertools.cycle(task_agent._MODEL_ROTATION))
     yield
     task_agent._jobs.clear()
     storage._sessions.clear()
