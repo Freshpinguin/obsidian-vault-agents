@@ -134,7 +134,7 @@ class _SyncThread:
 @pytest.fixture
 def sync_threads(monkeypatch):
     """Lässt start_background_task synchron laufen (Task-Agent im selben Thread)."""
-    monkeypatch.setattr("src.agentic.agents.task_agent.threading.Thread", _SyncThread)
+    monkeypatch.setattr("src.agentic.engine.jobs.threading.Thread", _SyncThread)
 
 
 @pytest.fixture(autouse=True)
