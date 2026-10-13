@@ -1,4 +1,4 @@
-# src/agents/context_compactor.py
+# src/agentic/engine/compaction.py
 """Kontext-Kompaktierung für lange ReAct-Sessions (v.a. den Task-Agenten): Lange,
 vielschrittige Sessions sammeln pro Runde neue Tool-Aufrufe/-Ergebnisse an, und weil bei
 jedem LLM-Aufruf der KOMPLETTE bisherige Verlauf erneut gesendet wird (siehe

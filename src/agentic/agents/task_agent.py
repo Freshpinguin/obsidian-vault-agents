@@ -21,7 +21,7 @@ from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.llm_models import LLMModels
 from src.schemas.task_agent_schema import PlanStep, TaskAgentInput, TaskAgentOutput, UpdatePlanArgs
 from src.schemas.tool_schema import WikiTool
-from src.agentic.llm_engine import run_agent_session
+from src.agentic.engine import run_agent_session
 from src.agentic.shared_tools import CONTENT_TOOLS
 from src.core.logging_config import logger
 from src.navigation import format_ai_map, load_ai_map

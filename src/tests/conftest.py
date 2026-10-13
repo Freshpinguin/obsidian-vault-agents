@@ -92,7 +92,7 @@ def fake_llm(monkeypatch, _no_network):
 
     fake = FakeLLM()
     monkeypatch.setattr(litellm, "completion", fake)
-    monkeypatch.setattr("src.agentic.llm_engine.supports_tool_choice", lambda model: True)
+    monkeypatch.setattr("src.agentic.engine.runner.supports_tool_choice", lambda model: True)
     yield fake
     fake.assert_clean()
 

@@ -8,7 +8,7 @@ from src.agentic.agents.task_agent import TaskAgent, start_background_task, _job
 from src.agentic.agents.librarian import LibrarianAgent, ask_librarian, _MODEL_ROTATION as LIBRARIAN_ROTATION
 from src.agentic.agents.summarizer import SummarizerAgent
 from src.agentic.agents.folder_summarizer import FolderSummarizerAgent
-from src.agentic.context_compactor import maybe_compact, context_size_chars
+from src.agentic.engine.compaction import maybe_compact, context_size_chars
 from src.agentic.agents.web_search import web_search, MODEL as WEB_SEARCH_MODEL
 from src.agentic.agents.reasoner import run_reasoning, MODEL as REASONER_MODEL
 from src.core.obsidian_processor import process_obsidian_file, process_folder_summary

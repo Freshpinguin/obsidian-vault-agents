@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 import pytest
 
-from src.agentic.llm_engine import (
+from src.agentic.engine.runner import (
     FORCE_FINAL_ANSWER_INSTRUCTION,
     continue_chat_session,
     run_agent_session,
@@ -269,7 +269,7 @@ def test_e12_require_tool_choice_first_round(fake_llm: FakeLLM, dummy_agent_fact
     assert "tool_choice" not in calls[1].kwargs
 
     # Test with supports_tool_choice -> False
-    monkeypatch.setattr("src.agentic.llm_engine.supports_tool_choice", lambda model: False)
+    monkeypatch.setattr("src.agentic.engine.runner.supports_tool_choice", lambda model: False)
     fake_llm.script(
         agent.name,
         tool_calls(("dummy_tool", {"param": "2"})),

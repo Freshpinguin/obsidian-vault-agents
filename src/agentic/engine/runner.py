@@ -1,4 +1,4 @@
-# src/agents/llm_engine.py
+# src/agentic/engine/runner.py
 import json
 import litellm
 from litellm.utils import supports_tool_choice
@@ -7,7 +7,7 @@ from typing import Any
 from src.schemas.llm_models import FALLBACK_MAP, LLMModels
 from src.schemas.status import AgentStatus
 from src.core.logging_config import logger, SessionLogger
-from src.agentic.context_compactor import maybe_compact
+from src.agentic.engine.compaction import maybe_compact
 
 from src.schemas.agent_schema import (
     WikiAgent,

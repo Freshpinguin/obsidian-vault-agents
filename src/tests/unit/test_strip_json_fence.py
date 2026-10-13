@@ -1,5 +1,5 @@
 import pytest
-from src.agentic.llm_engine import _strip_json_fence
+from src.agentic.engine.runner import _strip_json_fence
 
 
 def test_strip_json_fence_without_fence():

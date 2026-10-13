@@ -152,7 +152,7 @@ class FakeLLM:
 
     def _register_defaults(self) -> None:
         from src.agentic.agents.chat import ChatAgent
-        from src.agentic.context_compactor import COMPACTION_SYSTEM_PROMPT
+        from src.agentic.engine.compaction import COMPACTION_SYSTEM_PROMPT
         from src.agentic.agents.folder_summarizer import FolderSummarizerAgent
         from src.agentic.agents.librarian import LibrarianAgent
         from src.agentic.agents.summarizer import SummarizerAgent
