@@ -16,15 +16,6 @@ from src.schemas.agent_schema import AgentSession, WikiAgent
 from src.schemas.llm_models import LLMModels
 from src.schemas.task_agent_schema import TaskAgentInput, TaskAgentOutput
 from src.agentic.engine import run_agent_session
-from src.agentic.engine.jobs import (
-    TaskJob,
-    _jobs,
-    _jobs_lock,
-    _format_plan,
-    _update_plan,
-    check_task_status,
-    start_background_task,
-)
 from src.agentic.tools import CONTENT_TOOLS
 from src.agentic.tools.tasks import update_plan_tool
 from src.core.logging_config import logger

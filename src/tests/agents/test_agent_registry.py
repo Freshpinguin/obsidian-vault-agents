@@ -4,7 +4,8 @@ from pathlib import Path
 import pytest
 
 from src.agentic.agents.chat import ChatAgent, start_wiki_chat
-from src.agentic.agents.task_agent import TaskAgent, start_background_task, _jobs
+from src.agentic.agents.task_agent import TaskAgent
+from src.agentic.engine.jobs import start_background_task, _jobs
 from src.agentic.agents.librarian import LibrarianAgent, ask_librarian
 from src.agentic.engine.model_rotation import (
     LIBRARIAN_MODELS as LIBRARIAN_ROTATION,

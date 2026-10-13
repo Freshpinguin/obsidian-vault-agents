@@ -2,9 +2,8 @@ import time
 from pathlib import Path
 import pytest
 
-from src.agentic.agents import task_agent
-from src.agentic.agents.task_agent import (
-    TaskAgent,
+from src.agentic.agents.task_agent import TaskAgent
+from src.agentic.engine.jobs import (
     check_task_status,
     start_background_task,
     _jobs,

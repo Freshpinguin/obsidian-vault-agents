@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 
 from src.agentic.agents.chat import ChatAgent, start_wiki_chat
-from src.agentic.agents import task_agent
+from src.agentic.engine import jobs
 from src.tests.fakes.fake_llm import FakeLLM, final, tool_calls
 
 
@@ -275,7 +275,7 @@ def test_tool_effect_deep_reasoning_includes_file_context(vault: Path, fake_llm:
 
 def test_tool_effect_start_background_task(vault: Path, fake_llm: FakeLLM, sync_threads):
     def update_plan_fn(kwargs):
-        active_id = list(task_agent._jobs.keys())[-1]
+        active_id = list(jobs._jobs.keys())[-1]
         return tool_calls(("update_plan", {"task_id": active_id, "steps": [{"step": "Schritt 1", "status": "done"}]}))
 
     fake_llm.script(
@@ -294,13 +294,13 @@ def test_tool_effect_start_background_task(vault: Path, fake_llm: FakeLLM, sync_
     assert session.is_successful
     call = fake_llm.last_call("Chat")
     assert "Hintergrund-Aufgabe gestartet (task_id:" in call.tool_results[0]
-    assert len(task_agent._jobs) == 1
+    assert len(jobs._jobs) == 1
 
 
 def test_tool_effect_check_task_status_known_and_unknown(vault: Path, fake_llm: FakeLLM, sync_threads):
     # Pre-populate a job
-    job = task_agent.TaskJob(task_id="test_tid", description="Test job", status="done")
-    task_agent._jobs["test_tid"] = job
+    job = jobs.TaskJob(task_id="test_tid", description="Test job", status="done")
+    jobs._jobs["test_tid"] = job
 
     fake_llm.script(
         "Chat",

@@ -5,7 +5,7 @@ import litellm
 from src.tests.conftest import VAULT_DIR
 from src.navigation.vault_navigation import VAULT_ROOT
 from src.tests.fakes.fake_llm import FakeLLM, final, tool_calls
-from src.agentic.agents.task_agent import start_background_task, _jobs, check_task_status
+from src.agentic.engine.jobs import start_background_task, _jobs, check_task_status
 
 
 def test_vault_root_matches_vault_dir():

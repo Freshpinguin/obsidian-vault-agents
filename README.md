@@ -10,6 +10,26 @@ Vault schneller wächst, als man ihn im Kopf behält: Wer ist noch mal mit wem
 verfeindet, und in welcher Datei stand die Regel zum Warp-Antrieb? Die Engine
 läuft auf einem Raspberry Pi, die Inhalte bleiben lokal.
 
+## Der eigentliche Punkt: das Ganze kostet nichts
+
+Alles, was hier beschrieben wird — sieben Agenten, Zusammenfassungs-Pipeline,
+Chat, Websuche, Hintergrund-Aufgaben — läuft vollständig auf dem **kostenlosen
+Free Tier von Google AI Studio**. Man braucht genau eine Sache, um es selbst zu
+betreiben: einen `GEMINI_API_KEY`, den man sich in zwei Minuten kostenlos
+anlegt. Keine Kreditkarte, kein Abo, keine Vektordatenbank, kein gehosteter
+Dienst, keine Nutzungsabrechnung. Ausser dem Strom für den Raspberry Pi
+entstehen keine laufenden Kosten — dauerhaft, nicht als Testphase.
+
+Das ist keine Nebenbemerkung, sondern die Vorgabe, aus der die Architektur
+entstanden ist: Verwendet werden ausschliesslich Modelle, die im Free Tier
+verfügbar sind (Gemini Flash-Lite und Gemma), und auch die Websuche nutzt
+Search Grounding im Free Tier. Debouncing, Modell-Kaskade, Modell-Rotation und
+Kontext-Kompaktierung sind alle genau dafür da, mit diesen Kontingenten
+auszukommen (siehe [Kosten: keine](#kosten-keine)).
+
+Wer einen eigenen Obsidian-Vault und einen Raspberry Pi (oder irgendeinen
+Rechner mit Docker) hat, kann das hier also ohne jede Ausgabe nachbauen.
+
 ---
 
 ## Das Grundproblem
@@ -70,6 +90,60 @@ Obsidian-Vault ──> watchdog ──> Scheduler (debounced) ──> Summarizer
 | **Reasoner** | längere Ausarbeitungen mit viel Kontext, hohes Thinking-Budget |
 | **Web-Search** | Faktenchecks gegen das echte Internet |
 
+## Der agentische Workflow in Kurzform
+
+Ausführlich dokumentiert in [docs/agentic-workflow.md](docs/agentic-workflow.md) —
+hier die Kurzfassung.
+
+**Zwei Arten von Agenten.** Fünf Agenten (Chat, Task, Librarian, Summarizer,
+FolderSummarizer) sind deklarative `WikiAgent`-Definitionen — System-Prompt,
+Eingabe-Schema, Antwort-Schema, Werkzeuge, Rundenbudget — und laufen über
+dieselbe Ausführungsschleife via `litellm`. Reasoner und Web-Search sind dagegen
+einzelne SDK-Aufrufe ohne Session und ohne Werkzeuge; sie existieren nur als
+Werkzeug anderer Agenten und geben im Fehlerfall einen lesbaren Fehlertext
+zurück statt zu werfen.
+
+**Ein Turn.** `engine/runner.py` führt pro Aufruf einen Turn aus: Kontext aus
+der Session bauen, Modell aufrufen, Werkzeug-Aufrufe ausführen und als
+Nachrichten anhängen, wiederholen — bis das Modell keine Werkzeuge mehr
+anfordert und stattdessen die finale Antwort liefert. Diese wird gegen das
+Antwort-Schema geparst; schlägt das fehl, geht der konkrete Fehlerbericht
+zurück ans Modell (bis `max_retries`). Eine Runde vor dem Iterationslimit
+werden die Werkzeuge entzogen und eine finale Antwort erzwungen, statt die
+Session ergebnislos abzubrechen.
+
+**Die Session ist die einzige Quelle der Wahrheit.** Der Kontext jedes
+Modellaufrufs entsteht ausschliesslich aus `AgentSession.messages` — daneben
+wird nichts mitgeführt. Genau deshalb kann die Kompaktierung einfach diese
+Liste umschreiben.
+
+**Absicherungen gegen halluzinierte Arbeit.** Zwei Prüfungen verwerfen eine
+syntaktisch gültige finale Antwort und erzwingen einen Retry: eine Antwort ganz
+ohne Werkzeug-Aufruf bei Agenten, die laut Prompt immer eines nutzen müssen
+(Task-Agent: `update_plan`), und eine Antwort, die eine Dateiänderung behauptet
+("lege ich dir an", "wurde erstellt"), ohne dass je ein schreibendes Werkzeug
+aufgerufen wurde.
+
+**Drei Abläufe.** (1) *Chat*: HTTP-Request → Chat-Agent mit ai_map und ggf. der
+im Editor geöffneten Notiz im Kontext → ReAct-Runden → Antwort plus Liste der
+tatsächlich ausgeführten Vault-Änderungen. (2) *Hintergrund-Aufgabe*: Der
+Chat-Agent startet den Task-Agenten in einem eigenen Thread und bekommt sofort
+eine `task_id`; dessen Plan liegt als reiner Zustand in der Job-Registry, eine
+Statusabfrage kostet daher keinen Modellaufruf. (3) *Zusammenfassung*: Watchdog
+→ debounced Scheduler → Summarizer → Frontmatter und `.ai_map.json` → Ordner-
+Zusammenfassung, die nur bei echter Änderung eine Ebene weiter nach oben
+kaskadiert.
+
+**Verschachtelte Sessions.** Ruft der Chat-Agent `ask_librarian` auf, läuft
+darin eine komplette zweite Agenten-Session mit eigenem Budget und eigenem
+Logfile. Sie liefert Antwort, Quellenpfade *und* den Volltext dieser Quellen
+zurück, damit der Aufrufer sie nicht erneut laden muss.
+
+**Nachvollziehbarkeit.** Jede Session schreibt eine Markdown-Logdatei nach
+`logs/llm_details/` — pro Schritt der komplette gesendete Kontext, die rohe
+Antwort, Tokenzahlen und alle Werkzeug-Aufrufe mit Ergebnis. Fehlverhalten
+lässt sich damit meist direkt am Log ablesen.
+
 ## Details, die den Unterschied machen
 
 **Debouncing statt Dauerfeuer.** Zusammenfassungen entstehen erst 30 Minuten nach
@@ -108,18 +182,21 @@ Rund 3.400 Zeilen Python.
 
 ## Kosten: keine
 
-Das gesamte System läuft auf dem **kostenlosen Kontingent von Google AI Studio**.
-Verwendet werden ausschliesslich Modelle, die dort im Free Tier verfügbar sind
-(Gemini Flash-Lite und Gemma), und auch die Websuche nutzt Search Grounding im
-Free Tier. Ausser dem Strom für den Raspberry Pi entstehen keine laufenden Kosten.
-
-Zwei Architekturentscheidungen ergeben sich direkt daraus:
+Wie oben beschrieben läuft das gesamte System auf dem **kostenlosen Kontingent
+von Google AI Studio**. Vier Architekturentscheidungen ergeben sich direkt
+daraus:
 
 - **Debouncing** verhindert, dass jede einzelne Änderung sofort einen Modellaufruf
   auslöst. Wer beim Schreiben alle paar Sekunden speichert, würde ein Kontingent
   sonst in Minuten aufbrauchen.
 - **Die Modell-Kaskade** fängt erschöpfte Ratenlimits ab: Statt abzubrechen, fällt
   die Engine auf das nächstschwächere Modell zurück, das noch Kontingent hat.
+- **Die Modell-Rotation** verteilt die Last auf zwei Kontingente, weil das
+  Tokens/Minute-Limit pro Modell gilt: Librarian-Anfragen wechseln sich zwischen
+  zwei Gemma-Modellen ab, Hintergrund-Aufgaben zwischen zwei Flash-Lite-Modellen.
+- **Die Kontext-Kompaktierung** hält den pro Runde gesendeten Verlauf klein —
+  ohne sie läuft eine lange Task-Session allein durch ihren mitgeschleppten
+  Kontext ins Limit.
 
 Wer mehr Durchsatz braucht, kann über `litellm` jeden anderen Anbieter
 einhängen — dann fallen dessen Kosten an.
