@@ -47,3 +47,12 @@ class WikiTool(BaseModel):
             return f"Fehler bei Ausführung von Tool '{self.name}': {e}"
 
         return result if isinstance(result, str) else str(result)
+
+
+MUTATION_TOOL_NAMES: frozenset[str] = frozenset({
+    "create_file",
+    "edit_file",
+    "move_file",
+    "create_directory",
+    "delete_file",
+})

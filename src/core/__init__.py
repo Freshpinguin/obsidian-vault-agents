@@ -1,5 +1,5 @@
 # src/core/__init__.py
-from src.core.logging_config import SessionLogger, logger
+from src.core.logging_config import logger
 from src.core.backup import run_auto_backup
 from src.core.core_engine import ensure_directory_index, update_ai_map
 from src.core.obsidian_processor import (
@@ -16,7 +16,6 @@ from src.core.map_maintenance import run_ai_map_maintenance
 
 __all__ = [
     "logger",
-    "SessionLogger",
     "run_auto_backup",
     "ensure_directory_index",
     "update_ai_map",

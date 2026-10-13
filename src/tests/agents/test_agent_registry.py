@@ -16,7 +16,7 @@ from src.schemas.agent_schema import AgentSession, MessageRole, SessionMessage, 
 from src.schemas.folder_summarizer_schema import FolderSummarizerOutput
 from src.schemas.summarizer_schema import SummarizerOutput
 from src.tests.fakes.fake_llm import FakeLLM, final, raw, tool_calls
-from src.core.logging_config import SessionLogger
+from src.agentic.engine.session_log import SessionLogger
 
 
 EXPECTED_WIKI_AGENTS = {"Chat", "TaskAgent", "Librarian", "Summarizer", "FolderSummarizer"}

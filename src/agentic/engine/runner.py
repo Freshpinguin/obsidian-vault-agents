@@ -6,8 +6,16 @@ from typing import Any
 
 from src.schemas.llm_models import FALLBACK_MAP, LLMModels
 from src.schemas.status import AgentStatus
-from src.core.logging_config import logger, SessionLogger
+from src.core.logging_config import logger
+from src.agentic.engine.session_log import SessionLogger
 from src.agentic.engine.compaction import maybe_compact
+from src.agentic.engine.response import strip_json_fence
+from src.agentic.engine.guards import (
+    HALLUCINATED_MUTATION_ERROR,
+    SKIPPED_REQUIRED_TOOL_ERROR,
+    check_hallucinated_mutation,
+    check_skipped_required_tool,
+)
 
 from src.schemas.agent_schema import (
     WikiAgent,
@@ -25,17 +33,7 @@ FORCE_FINAL_ANSWER_INSTRUCTION = (
 )
 
 
-def _strip_json_fence(text: str) -> str:
-    """Entfernt eine umschließende Markdown-Codeblock-Klammer (```json ... ```),
-    falls das Modell trotz Anweisung eine liefert. Nur relevant, wenn kein
-    response_format erzwungen wird (also im Tool-Calling-Fall), ansonsten ein No-Op."""
-    text = text.strip()
-    if not text.startswith("```"):
-        return text
-    body = text.split("\n", 1)[1] if "\n" in text else ""
-    if body.endswith("```"):
-        body = body[: -3]
-    return body.strip()
+_strip_json_fence = strip_json_fence
 
 
 def _run_turn(session: AgentSession, model_override: LLMModels | None = None) -> None:
@@ -181,33 +179,14 @@ def _run_turn(session: AgentSession, model_override: LLMModels | None = None) ->
         # Kein Tool-Aufruf mehr angefordert -> das sollte die finale, strukturierte Antwort sein.
         parse_result = agent.parse_response(_strip_json_fence(raw_content))
         session.messages.append(SessionMessage(role=MessageRole.ASSISTANT, content=raw_content))
-
         # Modell hat den geforderten "erst mindestens ein Tool nutzen"-Schritt übersprungen
         # und direkt eine (evtl. komplett halluzinierte) finale Antwort geliefert - trotz
         # gültigem JSON NICHT als Erfolg werten, sondern wie einen Parse-Fehler behandeln.
-        skipped_required_tool = agent.require_tool_call_first_round and tool_steps == 0
+        skipped_required_tool = check_skipped_required_tool(agent, tool_steps)
 
         # Prüfen, ob der Agent eine Dateimodifikation im Text behauptet/angekündigt hat,
         # ohne je ein entsprechendes Werkzeug (z.B. create_file, edit_file) aufgerufen zu haben.
-        hallucinated_mutation = False
-        mutation_tool_names = {"create_file", "edit_file", "move_file", "create_directory", "delete_file"}
-        has_mutation_tools = any(t.name in mutation_tool_names for t in agent.tools)
-        if tool_steps == 0 and has_mutation_tools and parse_result.status == AgentStatus.SUCCESS:
-            reply_text = ""
-            if hasattr(parse_result.parsed_data, "reply"):
-                reply_text = str(parse_result.parsed_data.reply).lower()
-            elif isinstance(parse_result.parsed_data, dict):
-                reply_text = str(parse_result.parsed_data.get("reply", "")).lower()
-
-            mutation_indicators = [
-                "angelegt", "erstellt", "gespeichert", "bearbeitet", "verschoben", "gelöscht",
-                "lege dir", "erstelle dir", "lege die datei", "erstelle die datei",
-                "ich erstelle", "ich lege", "lösche die datei", "habe gelöscht",
-            ]
-            if any(ind in reply_text for ind in mutation_indicators) and (".md" in reply_text or "datei" in reply_text or "ordner" in reply_text):
-                negations = ["nicht angelegt", "keine datei", "konnte nicht", "nicht möglich", "nicht gefunden", "wurde nicht", "nicht gelöscht"]
-                if not any(neg in reply_text for neg in negations):
-                    hallucinated_mutation = True
+        hallucinated_mutation = check_hallucinated_mutation(agent, parse_result, tool_steps)
 
         if parse_result.status == AgentStatus.SUCCESS and not skipped_required_tool and not hallucinated_mutation:
             call_record = LLMCall(
@@ -225,18 +204,9 @@ def _run_turn(session: AgentSession, model_override: LLMModels | None = None) ->
             break
 
         if skipped_required_tool:
-            error_report = (
-                "Deine Antwort wurde abgelehnt: Du musst für diese Aufgabe mindestens einmal ein Werkzeug "
-                "aufrufen (z.B. update_plan), bevor du eine finale Antwort gibst. Rufe jetzt zuerst das "
-                "passende Werkzeug auf, statt direkt zu antworten."
-            )
+            error_report = SKIPPED_REQUIRED_TOOL_ERROR
         elif hallucinated_mutation:
-            error_report = (
-                "Deine Antwort wurde abgelehnt: Du hast im Antworttext behauptet oder angekündigt, eine Datei bzw. einen Ordner "
-                "anzulegen oder zu verändern, hast aber KEIN entsprechendes Werkzeug (z.B. create_file, edit_file) "
-                "als Tool-Call ausgeführt! Es wurde daher nichts im Vault gespeichert. "
-                "Rufe JETZT im nächsten Schritt ZUERST das passende Werkzeug (z.B. create_file) per Function-Call auf!"
-            )
+            error_report = HALLUCINATED_MUTATION_ERROR
         else:
             error_report = parse_result.error_report
 

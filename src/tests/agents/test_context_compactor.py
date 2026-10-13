@@ -2,7 +2,7 @@ import pytest
 
 from src.agentic.engine.compaction import maybe_compact, context_size_chars
 from src.agentic.agents.task_agent import TaskAgent
-from src.core.logging_config import SessionLogger
+from src.agentic.engine.session_log import SessionLogger
 from src.schemas.agent_schema import (
     AgentSession,
     MessageRole,
